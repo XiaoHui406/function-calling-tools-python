@@ -31,7 +31,7 @@
 ```bash
 # 克隆仓库
 git clone https://github.com/XiaoHui406/function-calling-tools-python.git
-cd function-call-tools-python
+cd function-calling-tools-python
 
 # 使用 uv 安装依赖
 uv sync
@@ -42,7 +42,7 @@ uv sync
 ```bash
 # 克隆仓库
 git clone https://github.com/XiaoHui406/function-calling-tools-python.git
-cd function-call-tools-python
+cd function-calling-tools-python
 
 # 安装依赖
 pip install -e .
