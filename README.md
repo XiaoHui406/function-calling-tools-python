@@ -1,4 +1,4 @@
-# Function Call Tools
+# Function Calling Tools
 
 一个用于 OpenAI Function Calling 的轻量级 Python 工具库，提供自动工具注册、参数校验和工具调用管理功能。
 
