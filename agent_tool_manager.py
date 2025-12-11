@@ -18,7 +18,7 @@ class AgentTool(BaseModel):
     func: Callable
     InputClass: Type[BaseModel]
 
-    def to_json_schema(self) -> ChatCompletionFunctionToolParam:
+    def to_tool(self) -> ChatCompletionFunctionToolParam:
         name = self.func.__name__
         description = self.func.__doc__.strip(
         ) if self.func.__doc__ else f'调用函数{self.func.__name__}'
@@ -67,7 +67,7 @@ class AgentToolManager:
         """
         tools: list[ChatCompletionFunctionToolParam] = []
         for (name, tool) in self.tool_map.items():
-            tools.append(tool.to_json_schema())
+            tools.append(tool.to_tool())
         return tools
 
     def call_tool(self, tool_call: ChatCompletionMessageFunctionToolCall) -> ChatCompletionToolMessageParam:
@@ -139,3 +139,17 @@ class AgentToolManager:
                         print(f"✅ 成功加载模块: {module_name}")
                     except Exception as e:
                         print(f"❌ 加载模块 '{module_name}' 失败: {e}")
+
+
+def merge_tools(tool_managers: list[AgentToolManager]) -> list[ChatCompletionFunctionToolParam]:
+    """
+    合并多个工具管理器中的工具。
+    """
+    tools: list[ChatCompletionFunctionToolParam] = []
+    tool_name_list: set = set()
+    for manager in tool_managers:
+        for tool in manager.generate_tools():
+            if tool["function"]["name"] not in tool_name_list:
+                tools.append(tool)
+                tool_name_list.add(tool["function"]["name"])
+    return tools
