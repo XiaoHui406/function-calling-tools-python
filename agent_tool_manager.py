@@ -91,59 +91,78 @@ class AgentToolManager:
             role='tool', tool_call_id=tool_call_id, content=json.dumps(content, ensure_ascii=False))
         return tool_callback
 
-    def load_tools(self, package_name: str):
-        """
-        扫描并动态导入指定基础包下的子模块，自动注册工具。忽略 __pycache__ 与 __init__.py。
-        """
-        try:
-            # 1. 基础导入：先找到顶层包的位置
-            # 例如导入 'agent_tools'，获取它的物理路径
-            base_package = importlib.import_module(package_name)
-            # package.__path__ 是一个列表，通常取第一个路径
-            if not hasattr(base_package, "__path__"):
-                return  # 如果是单文件而非包，直接返回（因为上面import_module已经加载了）
 
-            base_path = base_package.__path__[0]
 
-        except ImportError as e:
-            raise ValueError(f"无法导入基础包 '{package_name}': {e}")
 
-        print(f"--- 开始扫描工具目录: {base_path} ---")
+def load_tools(package_name: str):
+    """
+    扫描并动态导入指定包下的所有 Python 模块，触发模块中的工具注册。
+    
+    工具会注册到各模块代码中指定的 AgentToolManager 实例（通常是 tool_registry.tool_manager）。
+    
+    Args:
+        package_name: 要扫描的包名，例如 "agent_tools"
+    
+    注意：
+        - 该函数只负责导入模块，不直接操作任何 manager 实例
+        - 工具注册由模块中的装饰器完成
+        - 忽略 __pycache__ 目录和 __init__.py 文件
+    """
+    try:
+        # 1. 基础导入：先找到顶层包的位置
+        # 例如导入 'agent_tools'，获取它的物理路径
+        base_package = importlib.import_module(package_name)
+        # package.__path__ 是一个列表，通常取第一个路径
+        if not hasattr(base_package, "__path__"):
+            return  # 如果是单文件而非包，直接返回（因为上面import_module已经加载了）
 
-        # 2. 使用 os.walk 遍历物理文件系统
-        for root, dirs, files in os.walk(base_path):
-            # 忽略 __pycache__ 目录
-            if '__pycache__' in dirs:
-                dirs.remove('__pycache__')
+        base_path = base_package.__path__[0]
 
-            for file in files:
-                if file.endswith(".py") and file != "__init__.py":
-                    # 3. 构造模块路径
-                    # 算出当前文件相对于基础包的相对路径
-                    # 例如: root='/.../agent_tools/math_tools', base_path='/.../agent_tools'
-                    # rel_path = 'math_tools'
-                    rel_path = os.path.relpath(root, base_path)
+    except ImportError as e:
+        raise ValueError(f"无法导入基础包 '{package_name}': {e}")
 
-                    if rel_path == ".":
-                        # 文件就在 agent_tools 根目录下
-                        module_name = f"{package_name}.{file[:-3]}"
-                    else:
-                        # 文件在子目录中，需要把路径分隔符 (/) 换成点 (.)
-                        # Windows下是 \, Linux下是 /，os.path.sep 自动处理
-                        sub_package = rel_path.replace(os.path.sep, ".")
-                        module_name = f"{package_name}.{sub_package}.{file[:-3]}"
+    print(f"--- 开始扫描工具目录: {base_path} ---")
 
-                    # 4. 动态导入
-                    try:
-                        importlib.import_module(module_name)
-                        print(f"✅ 成功加载模块: {module_name}")
-                    except Exception as e:
-                        print(f"❌ 加载模块 '{module_name}' 失败: {e}")
+    # 2. 使用 os.walk 遍历物理文件系统
+    for root, dirs, files in os.walk(base_path):
+        # 忽略 __pycache__ 目录
+        if '__pycache__' in dirs:
+            dirs.remove('__pycache__')
+
+        for file in files:
+            if file.endswith(".py") and file != "__init__.py":
+                # 3. 构造模块路径
+                # 算出当前文件相对于基础包的相对路径
+                # 例如: root='/.../agent_tools/math_tools', base_path='/.../agent_tools'
+                # rel_path = 'math_tools'
+                rel_path = os.path.relpath(root, base_path)
+
+                if rel_path == ".":
+                    # 文件就在 agent_tools 根目录下
+                    module_name = f"{package_name}.{file[:-3]}"
+                else:
+                    # 文件在子目录中，需要把路径分隔符 (/) 换成点 (.)
+                    # Windows下是 \, Linux下是 /，os.path.sep 自动处理
+                    sub_package = rel_path.replace(os.path.sep, ".")
+                    module_name = f"{package_name}.{sub_package}.{file[:-3]}"
+
+                # 4. 动态导入
+                try:
+                    importlib.import_module(module_name)
+                    print(f"✅ 成功加载模块: {module_name}")
+                except Exception as e:
+                    print(f"❌ 加载模块 '{module_name}' 失败: {e}")
 
 
 def merge_tools(tool_managers: list[AgentToolManager]) -> list[ChatCompletionFunctionToolParam]:
     """
     合并多个工具管理器中的工具。
+    
+    Args:
+        tool_managers: 要合并的 AgentToolManager 实例列表
+    
+    Returns:
+        合并后的工具列表，去重后的 tools
     """
     tools: list[ChatCompletionFunctionToolParam] = []
     tool_name_list: set = set()
