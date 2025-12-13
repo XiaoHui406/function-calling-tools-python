@@ -92,17 +92,15 @@ class AgentToolManager:
         return tool_callback
 
 
-
-
 def load_tools(package_name: str):
     """
     扫描并动态导入指定包下的所有 Python 模块，触发模块中的工具注册。
-    
+
     工具会注册到各模块代码中指定的 AgentToolManager 实例（通常是 tool_registry.tool_manager）。
-    
+
     Args:
         package_name: 要扫描的包名，例如 "agent_tools"
-    
+
     注意：
         - 该函数只负责导入模块，不直接操作任何 manager 实例
         - 工具注册由模块中的装饰器完成
@@ -157,10 +155,10 @@ def load_tools(package_name: str):
 def merge_tools(tool_managers: list[AgentToolManager]) -> list[ChatCompletionFunctionToolParam]:
     """
     合并多个工具管理器中的工具。
-    
+
     Args:
         tool_managers: 要合并的 AgentToolManager 实例列表
-    
+
     Returns:
         合并后的工具列表，去重后的 tools
     """
