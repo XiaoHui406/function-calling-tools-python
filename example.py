@@ -68,6 +68,7 @@ def send_messages(messages):
     """
     发送消息到模型并附带已注册的 tools Schema，返回模型消息。
     """
+    assert model is not None
     try:
         response = client.chat.completions.create(
             model=model,
@@ -109,6 +110,7 @@ def run_function_calling_test():
         print(f"\n模型直接回复（未使用工具）: {message.content}")
         return
 
+    assert type(message.tool_calls[0]) is ChatCompletionMessageFunctionToolCall
     print(f"\n[步骤2] 模型请求调用工具: {message.tool_calls[0].function.name}")
     print(f"工具参数: {message.tool_calls[0].function.arguments}")
 
