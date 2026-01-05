@@ -3,8 +3,9 @@ Function calling 工具管理器：封装工具注册、schema 生成、调用�
 """
 import importlib
 import os
-from pydantic import BaseModel, Field
-from typing import Callable, Type
+from pydantic import BaseModel, Field, create_model
+from typing import Callable, Type, Optional, Union, get_type_hints
+import inspect
 from openai.types.chat import ChatCompletionMessageFunctionToolCall, ChatCompletionFunctionToolParam, ChatCompletionToolMessageParam
 from openai.types.shared_params import FunctionDefinition
 import json
@@ -12,8 +13,8 @@ import json
 
 class AgentTool(BaseModel):
     '''
-    func: 加入function_calling的函数，其传入的参数中只能是一个继承了BaseModel的类
-    InputClass: 继承BaseModel的传入参数类
+    func: 加入function_calling的函数
+    InputClass: 用于生成JSON Schema的Pydantic模型类
     '''
     func: Callable
     InputClass: Type[BaseModel]
@@ -44,22 +45,146 @@ class AgentToolManager:
         self.tool_name_list: list[str] = []
         self.tool_map: dict[str, AgentTool] = {}
 
-    def agent_tool(self, InputClass: Type[BaseModel]):
+    def agent_tool(self, InputClass: Type[BaseModel] | str | None = None):
         """
-        装饰器：注册函数为工具。要求函数参数为继承 BaseModel 的类，用于自动生成 JSON Schema。
-        返回原函数以保持调用不变。
+        装饰器：注册函数为工具。
+
+        使用方式：
+        1. 手动指定 Pydantic 模型类（原有方式）:
+            @manager.agent_tool(InputClass=MyParams)
+            def my_func(params: MyParams): ...
+
+        2. 自动生成模型类（新方式）:
+            @manager.agent_tool()  # 或不带参数：@manager.agent_tool
+            def my_func(a: int, b: str = "默认值"): ...
+
+           将根据函数参数的类型注解自动生成 Pydantic 模型
+
+        3. 将模型类名指定为字符串（新方式）:
+            @manager.agent_tool(InputClass="MyParams")
+            def my_func(MyParams): MyParams  # MyParams 必须是 BaseModel
+
+        Returns:
+            装饰后的原函数，保持调用不变。
         """
         def decorator(func: Callable):
             tool_name: str = func.__name__
-            if func.__name__ in self.tool_name_list:
+
+            if tool_name in self.tool_name_list:
                 raise ValueError(
                     f"Tool name conflict：名为 '{tool_name}' 的tool已被注册。请重命名该function或确保tool名称唯一。"
                 )
-            tool: AgentTool = AgentTool(func=func, InputClass=InputClass)
-            self.tool_map[func.__name__] = tool
+
+            # 确定要使用的模型类
+            resolved_input_class = None
+
+            # 情况1：用户传入了 BaseModel 类（原有方式）
+            if InputClass is not None and isinstance(InputClass, type) and issubclass(InputClass, BaseModel):
+                resolved_input_class = InputClass
+
+            # 情况2：用户传入了类名字符串（新方式）
+            elif isinstance(InputClass, str):
+                from tool_registry import tool_manager
+                # 查找全局命名空间中的类
+                import sys
+                frame = sys._getframe()
+                # 在调用栈中查找类定义
+                for f in [frame] + [f for f in inspect.getouterframes(frame)[1:]]:
+                    local_class = f.f_locals.get(InputClass)
+                    if local_class and isinstance(local_class, type) and issubclass(local_class, BaseModel):
+                        resolved_input_class = local_class
+                        break
+
+            # 情况3：用户没有传入参数，自动从参数注解生成 Pydantic 模型（新方式）
+            elif InputClass is None:
+                resolved_input_class = self._create_model_from_type_hints(
+                    func, tool_name)
+
+            if resolved_input_class is None:
+                raise ValueError(
+                    f"无法确定输入模型类。请确保：\n"
+                    f"1. 传入有效的 BaseModel 子类，或\n"
+                    f"2. 使用类型注解并确保类型的正确性，或\n"
+                    f"3. 传入类名字符串且该类已定义。"
+                )
+
+            tool: AgentTool = AgentTool(
+                func=func, InputClass=resolved_input_class)
+            self.tool_map[tool_name] = tool
             self.tool_name_list.append(tool_name)
             return func
+
         return decorator
+
+    def _create_model_from_type_hints(self, func: Callable, model_name: str) -> Type[BaseModel]:
+        """
+        根据函数的类型注解自动创建 Pydantic 模型。
+
+        Args:
+            func: 要装饰的函数
+            model_name: 生成的模型名称（通常使用函数名）
+
+        Returns:
+            生成的 Pydantic 模型类
+        """
+        try:
+            # 获取函数参数的类型注解
+            # 从返回得到的数据结构形如 {'a': <class 'int'>, 'b': <class 'str'>}
+            sig = inspect.signature(func)
+            type_hints = get_type_hints(func)
+
+            # 构建 Pydantic 字段字典
+            fields = {}
+
+            for param_name, param in sig.parameters.items():
+                # 获取参数类型
+                param_type = type_hints.get(param_name)
+
+                if param_type is None:
+                    raise ValueError(
+                        f"参数 '{param_name}' 缺少类型注解。自动生成模型需要所有参数都有明确的类型注解。\n"
+                        f"提示：使用 Type[int], Type[str], Type[float], Type[bool] 等类型。"
+                    )
+
+                # 获取默认值
+                default_value = param.default
+                has_default = param.default != inspect.Parameter.empty
+
+                # 构建字段定义
+                # 如果参数有默认值，使用 (type, default) 元组
+                # 如果没有默认值，使用 (type, Field(description=...))
+                # Field(...) 表示必填字段
+                if has_default:
+                    fields[param_name] = (param_type, default_value)
+                else:
+                    fields[param_name] = (
+                        param_type, Field(..., description=f"参数 {param_name}"))
+
+            # 使用 Pydantic 的 create_model 动态创建模型
+            # 如果没有字段（空参数函数），创建一个空的 BaseModel
+            if not fields:
+                fields = {"dummy": (str, Field(
+                    default="unused", exclude=True))}
+
+            model = create_model(f"{model_name}_Params", **fields)
+
+            # 如果有虚拟字段，删除它
+            if "dummy" in model.model_fields:
+                @classmethod
+                def no_dummy_model_validate(cls, v):
+                    if isinstance(v, dict) and "dummy" in v:
+                        del v["dummy"]
+                    return super(model, cls).model_validate(v)
+                model.model_validate = no_dummy_model_validate
+
+            return model
+
+        except Exception as e:
+            raise ValueError(
+                f"无法自动生成参数模型: {e}\n"
+                f"提示：确保所有参数都有类型注解。\n"
+                f"错误函数：{func.__name__}"
+            )
 
     def generate_tools(self) -> list[ChatCompletionFunctionToolParam]:
         """
@@ -84,8 +209,18 @@ class AgentToolManager:
 
         func, InputClass = self.tool_map[tool_name].func, self.tool_map[tool_name].InputClass
 
+        # 实例化参数模型，对 auto-generated models 重新实例化
         tool_args = InputClass(**arguments)
-        content = func(tool_args)
+
+        # 调用函数：如果有单个参数且模型类型匹配，直接传入模型对象
+        # 否则传入展开的参数
+        sig = inspect.signature(func)
+        if len(sig.parameters) == 1:
+            # 单个参数：直接传入模型对象
+            content = func(tool_args)
+        else:
+            # 多参数：展开模型对象为关键参数
+            content = func(**tool_args.model_dump())
 
         tool_callback: ChatCompletionToolMessageParam = ChatCompletionToolMessageParam(
             role='tool', tool_call_id=tool_call_id, content=json.dumps(content, ensure_ascii=False))
@@ -147,9 +282,9 @@ def load_tools(package_name: str):
                 # 4. 动态导入
                 try:
                     importlib.import_module(module_name)
-                    print(f"✅ 成功加载模块: {module_name}")
+                    print(f"[OK] Loaded module: {module_name}")
                 except Exception as e:
-                    print(f"❌ 加载模块 '{module_name}' 失败: {e}")
+                    print(f"[FAIL] Failed to load module '{module_name}': {e}")
 
 
 def merge_tools(tool_managers: list[AgentToolManager]) -> list[ChatCompletionFunctionToolParam]:

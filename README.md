@@ -9,14 +9,14 @@
 - 🔒 **类型安全**：基于 Pydantic 自动生成和校验 OpenAI 所需的 JSON Schema
 - 🚀 **零侵入设计**：装饰后的函数仍可独立调用，不影响原有逻辑
 - 🔄 **调用闭环管理**：统一处理工具调用、参数解析和结果封装
+- 🆕 **多种参数方式**：支持 Pydantic BaseModel、自动类型推导等多种参数定义方式
 
 ## 📋 目录
 
 - [安装](#安装)
 - [快速开始](#快速开始)
 - [核心概念](#核心概念)
-- [API 使用](#api-使用)
-- [工具定义](#工具定义)
+- [工具定义方式](#工具定义方式)
 - [完整示例](#完整示例)
 - [项目结构](#项目结构)
 
@@ -88,6 +88,146 @@ python example.py
 ========== 测试完成 ==========
 ```
 
+### 3. 测试新的装饰器功能
+
+```bash
+python test_new_decorator.py
+```
+
+## 🎯 工具定义方式
+
+本库支持多种工具定义方式，从简单到灵活任你选择：
+
+### 方式1：自动类型推导（推荐，最简单）
+
+适用于不需要复杂参数校验的场景：
+
+```python
+from tool_registry import tool_manager
+
+@tool_manager.agent_tool()  # 不传参数，自动推导
+def calculate(a: int, b: int):
+    """
+    计算两个整数的和。
+    """
+    return {"result": a + b}
+
+# 或使用默认值
+@tool_manager.agent_tool()
+def greet(name: str, message: str = "你好"):
+    """
+    向用户问候。
+    """
+    return {"greeting": f"{message}, {name}！"}
+```
+
+**优势：**
+- 代码简洁，无需定义额外的类
+- 系统根据类型注解自动生成 Pydantic 模型
+- 支持所有标准 Python 类型（int, str, float, bool, list 等）
+
+**要求：**
+- 所有参数必须有类型注解
+
+### 方式2：使用 Pydantic BaseModel（推荐，功能最全）
+
+适用于需要复杂校验、文档说明的场景：
+
+```python
+from pydantic import BaseModel, Field
+from tool_registry import tool_manager
+
+class WeatherParams(BaseModel):
+    """天气查询参数"""
+    city: str = Field(description="城市名称", min_length=1)
+    unit: str = Field(default="celsius", description="温度单位")
+
+@tool_manager.agent_tool(InputClass=WeatherParams)
+def get_weather(params: WeatherParams):
+    """
+    获取指定城市的天气信息。
+    """
+    return {"city": params.city, "temperature": "25°C"}
+```
+
+**优势：**
+- 完整的 Pydantic 验证功能
+- 可以添加字段描述（会反映到 JSON Schema）
+- 支持复杂的嵌套结构
+
+## 🔄 升级指南
+
+### 新版本功能总览
+
+本次更新主要增强功能如下：
+
+| 功能 | 新增/增强 | 说明 |
+|------|-----------|------|
+| 自动类型推导 | 🆕 新增 | 无需定义 BaseModel，系统自动从类型注解生成 |
+| 可选装饰器参数 | ✅ 增强 | `agent_tool()` 可以不传参数 |
+| 类名字符串引用 | 🆕 新增 | 可以用字符串指定 BaseModel 类型 |
+| 向后兼容 | ✅ 保持 | 所有旧代码无需修改 |
+
+## 🔄 升级指南
+
+### 新版本功能总览
+
+本次更新主要增强功能如下：
+
+| 功能 | 新增/增强 | 说明 |
+|------|-----------|------|
+| 自动类型推导 | 🆕 新增 | 无需定义 BaseModel，系统自动从类型注解生成 |
+| 可选装饰器参数 | ✅ 增强 | `agent_tool()` 可以不传参数 |
+| 类名字符串引用 | 🆕 新增 | 可以用字符串指定 BaseModel 类型 |
+| 向后兼容 | ✅ 保持 | 所有旧代码无需修改 |
+
+### 迁移指南
+
+**原有代码（仍然可用）：**
+
+```python
+from pydantic import BaseModel, Field
+
+class OldParams(BaseModel):
+    name: str = Field(description="姓名")
+
+@tool_manager.agent_tool(InputClass=OldParams)
+def old_func(params: OldParams):
+    return "Hello"
+```
+
+**新的简化写法（推荐）：**
+
+```python
+# 自动生成参数模型
+@tool_manager.agent_tool()
+def new_func(name: str) -> str:
+    return f"Hello, {name}!"
+```
+
+**需要注意：**
+- ✅ 必须使用类型注解（推荐使用 Python 3.12+）
+- ✅ 自动生成的 Pydantic 模型将使用最严格的验证规则
+- ✅ 如需字段描述，请使用 Pydantic BaseModel 方式
+- ✅ 完全向后兼容，现有代码正常运行
+
+## 📁 项目结构
+
+```
+function-call-tools/
+├── agent_tool_manager.py    # 核心工具管理器
+├── tool_registry.py          # 全局工具注册入口
+├── agent_tools/              # 工具模块目录
+│   └── math_tools/
+│       └── math_tools.py     # 示例：数学运算工具
+├── example.py                # 完整示例脚本
+├── test_new_decorator.py     # 新装饰器特性测试脚本
+├── test/                     # 单元测试目录
+├── pyproject.toml            # 项目配置
+├── .env                      # 环境变量（需自行创建）
+└── README.md                 # 项目文档
+```
+
 ## 🔍 核心概念
 
 ### AgentToolManager
@@ -102,74 +242,12 @@ python example.py
 ### 工作流程
 
 ```
-1. 定义工具 → 使用 Pydantic 定义参数 + 装饰器注册
+1. 定义工具 → 使用装饰器注册函数
 2. 生成 Schema → tool_manager.generate_tools()
 3. 调用模型 → 将 Schema 传递给 OpenAI API
 4. 执行工具 → tool_manager.call_tool(tool_call)
 5. 返回结果 → 将工具结果回传给模型
 ```
-
-## 📁 项目结构
-
-```
-function-call-tools/
-├── agent_tool_manager.py    # 核心工具管理器
-├── tool_registry.py          # 全局工具注册入口
-├── agent_tools/              # 工具模块目录
-│   └── math_tools/
-│       └── math_tools.py     # 示例：数学运算工具
-├── example.py                # 完整示例脚本
-├── test/                     # 测试目录
-│   ├── __init__.py
-│   ├── test_agent_tool_manager.py
-│   └── test_tool_registry.py   # 单元测试文件
-├── pyproject.toml            # 项目配置
-├── .env                      # 环境变量（需自行创建）
-└── README.md                 # 项目文档
-```
-
-## 🛠️ 工具定义
-
-### 步骤 1：创建工具模块
-
-在 `agent_tools/` 目录下创建你的工具模块（支持嵌套子目录）。
-
-### 步骤 2：定义参数模型
-
-使用 Pydantic 的 `BaseModel` 定义工具的输入参数：
-
-```python
-from pydantic import BaseModel, Field
-
-class CalculateInput(BaseModel):
-    """计算工具的输入参数"""
-    expression: str = Field(description="要计算的数学表达式")
-```
-
-### 步骤 3：使用装饰器注册工具
-
-```python
-from tool_registry import tool_manager
-
-@tool_manager.agent_tool(InputClass=CalculateInput)
-def calculate(params: CalculateInput):
-    """
-    计算数学表达式的值。
-    """
-    result = eval(params.expression)  # 生产环境请使用安全的计算方法
-    return {"result": result}
-```
-
-### 工具定义规范
-
-1. **参数类型**：函数参数必须是继承自 `BaseModel` 的类
-2. **函数文档**：使用 docstring 描述工具功能（会作为 tool description）
-3. **字段描述**：使用 `Field(description=...)` 描述参数含义
-4. **返回值**：返回可 JSON 序列化的数据（dict、str、int 等）
-
-### 完整示例
-
-查看 [`agent_tools/math_tools/math_tools.py`](agent_tools/math_tools/math_tools.py) 了解完整示例。
 
 ## 💡 完整示例
 
@@ -198,14 +276,14 @@ response = client.chat.completions.create(
 message = response.choices[0].message
 if message.tool_calls:
     tool_call = message.tool_calls[0]
-    
+
     # 执行工具
     result = tool_manager.call_tool(tool_call)
-    
+
     # 将结果返回给模型
     messages.append(message)
     messages.append(result)
-    
+
     # 获取最终回复
     final_response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -223,6 +301,15 @@ from tool_registry import tool_manager
 # 查看所有工具的 JSON Schema
 tools = tool_manager.generate_tools()
 print(json.dumps(tools, indent=2, ensure_ascii=False))
+```
+
+### 完整集成示例
+
+查看 [`example.py`](example.py) 和 [`test_new_decorator.py`](test_new_decorator.py) 了解完整的集成示例：
+
+```bash
+python example.py                    # 传统 BaseModel 方式
+python test_new_decorator.py         # 新特性演示
 ```
 
 ## 🔧 环境配置
@@ -262,6 +349,12 @@ pytest test/ -v
 pytest test/test_agent_tool_manager.py
 ```
 
+### 测试新特性
+
+```bash
+python test_new_decorator.py
+```
+
 ### 测试覆盖
 
 测试覆盖了以下核心功能：
@@ -272,6 +365,7 @@ pytest test/test_agent_tool_manager.py
 - 嵌套对象支持
 - 多 manager 实例独立性
 - 全局 tool_manager 自动加载
+- 自动类型推导（新增）
 
 ## 📚 API 使用
 
@@ -286,14 +380,15 @@ from agent_tool_manager import AgentToolManager
 manager = AgentToolManager()
 ```
 
-**主要方法**：
+**主要方法：**
 
 | 方法 | 说明 | 返回值 |
 |------|------|--------|
-| `agent_tool(InputClass)` | 装饰器，注册函数为工具 | 装饰器函数 |
+| `agent_tool(InputClass=None)` | 装饰器，注册函数为工具。InputClass 可选 | 装饰器函数 |
 | `generate_tools()` | 生成所有工具的 JSON Schema | `list[ChatCompletionFunctionToolParam]` |
 | `call_tool(tool_call)` | 执行工具调用并封装结果 | `ChatCompletionToolMessageParam` |
 | `load_tools(package_name)` | 自动扫描并加载工具模块 | `None` |
+| `_create_model_from_type_hints(func, model_name)` | 私有方法：从类型注解生成模型 | `Type[BaseModel]` |
 
 ### 使用全局实例
 
@@ -302,29 +397,59 @@ manager = AgentToolManager()
 ```python
 from tool_registry import tool_manager
 
-# 直接使用预配置的全局实例
+# 方式1：自动创建参数模型（新增，最简单）
+@tool_manager.agent_tool()
+def auto_tool(a: int, b: str):
+    """自动模式"""
+    pass
+
+# 方式2：手动指定 BaseModel（原有，功能最强）
+class MyInput(BaseModel):
+    name: str
+
 @tool_manager.agent_tool(InputClass=MyInput)
-def my_tool(params: MyInput):
+def manual_tool(params: MyInput):
+    """手动模式"""
+    pass
+
+# 方式3：通过类名字符串（新增，灵活引用）
+@tool_manager.agent_tool(InputClass="AnotherModel")
+def string_tool(params):
+    """字符串模式"""
     pass
 ```
 
-### 自动加载机制
+## 🔄 升级指南
 
-`tool_registry.py` 在导入时会自动执行 `load_tools("agent_tools")`，递归扫描并导入该包下的所有 `.py` 文件（排除 `__init__.py`），触发工具注册。
+### 从旧版本升级到新版本的改动
 
-### 添加新工具的步骤
+新版本主要改进：
 
-1. 在 `agent_tools/` 下创建工具模块（支持嵌套目录）
-2. 定义继承 `BaseModel` 的参数类
-3. 使用 `@tool_manager.agent_tool` 装饰器
-4. 编写清晰的 docstring（作为工具描述）
-5. 返回可 JSON 序列化的数据
+1. **不再强制要求继承 BaseModel**：可以使用自动类型推导
+2. **装饰器参数改为可选**：`agent_tool()` 可以不传参数
+3. **支持类名字符串**：可以通过字符串指定 BaseModel 类
+4. **完全向后兼容**：所有旧代码无需修改
 
-### 运行示例
+**原有代码示例（仍然可用）：**
 
-```bash
-# 查看完整的 function calling 调用流程
-python example.py
+```python
+# 旧代码 ❌ 被废弃 → ❌ 错误
+# 本条不存在，旧代码完全兼容
+
+# 旧代码 ✅ 仍然可用 → ✅ 正常工作
+from pydantic import BaseModel, Field
+
+class OldParams(BaseModel):
+    name: str = Field(description="姓名")
+
+@tool_manager.agent_tool(InputClass=OldParams)  # 旧方式
+def old_func(params: OldParams):
+    return "Hello"
+
+# 现在可以简化为（新增）：
+@tool_manager.agent_tool()  # 新方式
+def new_func(name: str):
+    return "Hello"
 ```
 
 ## 📄 许可证
