@@ -88,12 +88,6 @@ python example.py
 ========== 测试完成 ==========
 ```
 
-### 3. 测试新的装饰器功能
-
-```bash
-python test_new_decorator.py
-```
-
 ## 🎯 工具定义方式
 
 本库支持多种工具定义方式，从简单到灵活任你选择：
@@ -155,61 +149,11 @@ def get_weather(params: WeatherParams):
 - 可以添加字段描述（会反映到 JSON Schema）
 - 支持复杂的嵌套结构
 
-## 🔄 升级指南
-
-### 新版本功能总览
-
-本次更新主要增强功能如下：
-
-| 功能 | 新增/增强 | 说明 |
-|------|-----------|------|
-| 自动类型推导 | 🆕 新增 | 无需定义 BaseModel，系统自动从类型注解生成 |
-| 可选装饰器参数 | ✅ 增强 | `agent_tool()` 可以不传参数 |
-| 类名字符串引用 | 🆕 新增 | 可以用字符串指定 BaseModel 类型 |
-| 向后兼容 | ✅ 保持 | 所有旧代码无需修改 |
-
-## 🔄 升级指南
-
-### 新版本功能总览
-
-本次更新主要增强功能如下：
-
-| 功能 | 新增/增强 | 说明 |
-|------|-----------|------|
-| 自动类型推导 | 🆕 新增 | 无需定义 BaseModel，系统自动从类型注解生成 |
-| 可选装饰器参数 | ✅ 增强 | `agent_tool()` 可以不传参数 |
-| 类名字符串引用 | 🆕 新增 | 可以用字符串指定 BaseModel 类型 |
-| 向后兼容 | ✅ 保持 | 所有旧代码无需修改 |
-
-### 迁移指南
-
-**原有代码（仍然可用）：**
-
-```python
-from pydantic import BaseModel, Field
-
-class OldParams(BaseModel):
-    name: str = Field(description="姓名")
-
-@tool_manager.agent_tool(InputClass=OldParams)
-def old_func(params: OldParams):
-    return "Hello"
-```
-
-**新的简化写法（推荐）：**
-
-```python
-# 自动生成参数模型
-@tool_manager.agent_tool()
-def new_func(name: str) -> str:
-    return f"Hello, {name}!"
-```
 
 **需要注意：**
 - ✅ 必须使用类型注解（推荐使用 Python 3.12+）
 - ✅ 自动生成的 Pydantic 模型将使用最严格的验证规则
 - ✅ 如需字段描述，请使用 Pydantic BaseModel 方式
-- ✅ 完全向后兼容，现有代码正常运行
 
 ## 📁 项目结构
 

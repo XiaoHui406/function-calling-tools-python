@@ -43,6 +43,7 @@ print(f"生成的参数模型: {tool_manager.tool_map['add_numbers'].InputClass.
 # 演示带默认值的情况
 # =============================================================================
 
+
 @tool_manager.agent_tool()
 def greet_user(name: str, greeting: str = "你好"):
     """
@@ -58,6 +59,7 @@ print(f"生成的参数模型: {tool_manager.tool_map['greet_user'].InputClass._
 # =============================================================================
 # 演示可选参数的情况
 # =============================================================================
+
 
 @tool_manager.agent_tool()
 def get_user_info(user_id: int, include_email: bool = True):
@@ -82,6 +84,7 @@ print(f"生成的参数模型: {tool_manager.tool_map['get_user_info'].InputClas
 # =============================================================================
 # 演示许多参数的情况
 # =============================================================================
+
 
 @tool_manager.agent_tool()
 def create_user(username: str, email: str, age: int = 18, is_active: bool = True):
@@ -136,7 +139,8 @@ def get_current_weather(params: GetWeatherParams):
 
 
 print("✅ 成功注册工具: get_current_weather（手动 BaseModel）")
-print(f"使用的参数模型: {tool_manager.tool_map['get_current_weather'].InputClass.__name__}")
+print(
+    f"使用的参数模型: {tool_manager.tool_map['get_current_weather'].InputClass.__name__}")
 
 
 class GetTimeParams(BaseModel):
@@ -238,7 +242,9 @@ for i, mock_call in enumerate(mock_calls, 1):
 
     try:
         output = tool_manager.call_tool(tool_call)
-        print(f"结果: {json.dumps(json.loads(output.content), indent=2, ensure_ascii=False)}")
+        assert type(output['content']) is str
+        print(
+            f"结果: {json.dumps(json.loads(output['content']), indent=2, ensure_ascii=False)}")
     except Exception as e:
         print(f"❌ 错误: {e}")
 
@@ -268,6 +274,7 @@ else:
     def send_messages(messages):
         """发送消息到模型并附带已注册的 tools Schema，返回模型消息。"""
         try:
+            assert type(model) is str
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -302,7 +309,9 @@ else:
             print(f"\n模型直接回复（未使用工具）: {message.content}")
             return
 
-        assert isinstance(message.tool_calls[0], ChatCompletionMessageFunctionToolCall)
+        assert isinstance(
+            message.tool_calls[0], ChatCompletionMessageFunctionToolCall)
+
         print(f"\n[步骤2] 模型请求调用工具: {message.tool_calls[0].function.name}")
         print(f"工具参数: {message.tool_calls[0].function.arguments}")
 
@@ -313,7 +322,7 @@ else:
         try:
             print(f"\n[步骤3] 执行工具调用...")
             output = tool_manager.call_tool(tool)
-            print(f"工具执行结果: {output.content}")
+            print(f"工具执行结果: {output['content']}")
             messages.append(output)
         except Exception as e:
             print(f"❌ 工具调用失败: {e}")
@@ -330,7 +339,7 @@ else:
         print("\n示例问题 2: 查询北京的天气")
 
         messages = [
-            {"role": "user", "content": "查询北京的天气，使用华氏度"}
+            {"role": "user", "content": "查询北京的天气，使用摄氏度"}
         ]
 
         print("\n[步骤1] 发送消息到模型...")
@@ -340,6 +349,8 @@ else:
             print(f"\n模型直接回复: {message.content}")
             return
 
+        assert type(message.tool_calls[0]
+                    ) is ChatCompletionMessageFunctionToolCall
         print(f"\n[步骤2] 模型请求调用工具: {message.tool_calls[0].function.name}")
         print(f"工具参数: {message.tool_calls[0].function.arguments}")
 
@@ -349,7 +360,7 @@ else:
         try:
             print(f"\n[步骤3] 执行工具调用...")
             output = tool_manager.call_tool(tool)
-            print(f"工具执行结果: {output.content}")
+            print(f"工具执行结果: {output['content']}")
             messages.append(output)
         except Exception as e:
             print(f"❌ 工具调用失败: {e}")
