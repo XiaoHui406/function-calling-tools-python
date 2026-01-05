@@ -92,7 +92,7 @@ python example.py
 
 本库支持多种工具定义方式，从简单到灵活任你选择：
 
-### 方式1：自动类型推导（推荐，最简单）
+### 方式1：自动类型推导（最简单）
 
 适用于不需要复杂参数校验的场景：
 
@@ -150,7 +150,7 @@ def get_weather(params: WeatherParams):
 - 支持复杂的嵌套结构
 
 
-**需要注意：**
+### 需要注意：
 - ✅ 必须使用类型注解（推荐使用 Python 3.12+）
 - ✅ 自动生成的 Pydantic 模型将使用最严格的验证规则
 - ✅ 如需字段描述，请使用 Pydantic BaseModel 方式
@@ -165,7 +165,6 @@ function-call-tools/
 │   └── math_tools/
 │       └── math_tools.py     # 示例：数学运算工具
 ├── example.py                # 完整示例脚本
-├── test_new_decorator.py     # 新装饰器特性测试脚本
 ├── test/                     # 单元测试目录
 ├── pyproject.toml            # 项目配置
 ├── .env                      # 环境变量（需自行创建）
@@ -249,11 +248,10 @@ print(json.dumps(tools, indent=2, ensure_ascii=False))
 
 ### 完整集成示例
 
-查看 [`example.py`](example.py) 和 [`test_new_decorator.py`](test_new_decorator.py) 了解完整的集成示例：
+查看 [`example.py`](example.py) 了解完整的集成示例：
 
 ```bash
-python example.py                    # 传统 BaseModel 方式
-python test_new_decorator.py         # 新特性演示
+python example.py
 ```
 
 ## 🔧 环境配置
@@ -291,12 +289,6 @@ pytest test/ -v
 
 # 运行特定测试文件
 pytest test/test_agent_tool_manager.py
-```
-
-### 测试新特性
-
-```bash
-python test_new_decorator.py
 ```
 
 ### 测试覆盖
@@ -361,39 +353,6 @@ def manual_tool(params: MyInput):
 def string_tool(params):
     """字符串模式"""
     pass
-```
-
-## 🔄 升级指南
-
-### 从旧版本升级到新版本的改动
-
-新版本主要改进：
-
-1. **不再强制要求继承 BaseModel**：可以使用自动类型推导
-2. **装饰器参数改为可选**：`agent_tool()` 可以不传参数
-3. **支持类名字符串**：可以通过字符串指定 BaseModel 类
-4. **完全向后兼容**：所有旧代码无需修改
-
-**原有代码示例（仍然可用）：**
-
-```python
-# 旧代码 ❌ 被废弃 → ❌ 错误
-# 本条不存在，旧代码完全兼容
-
-# 旧代码 ✅ 仍然可用 → ✅ 正常工作
-from pydantic import BaseModel, Field
-
-class OldParams(BaseModel):
-    name: str = Field(description="姓名")
-
-@tool_manager.agent_tool(InputClass=OldParams)  # 旧方式
-def old_func(params: OldParams):
-    return "Hello"
-
-# 现在可以简化为（新增）：
-@tool_manager.agent_tool()  # 新方式
-def new_func(name: str):
-    return "Hello"
 ```
 
 ## 📄 许可证
