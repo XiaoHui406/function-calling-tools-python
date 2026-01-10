@@ -180,7 +180,6 @@ function-call-tools/
 - **工具注册**：通过 `@tool_manager.agent_tool()` 装饰器注册工具
 - **Schema 生成**：调用 `generate_tools()` 生成符合 OpenAI 格式的工具列表
 - **工具调用**：使用 `call_tool()` 执行模型返回的工具调用请求
-- **自动加载**：通过 `load_tools()` 批量导入工具模块
 
 ### 工作流程
 
@@ -323,8 +322,48 @@ manager = AgentToolManager()
 | `agent_tool(InputClass=None)` | 装饰器，注册函数为工具。InputClass 可选 | 装饰器函数 |
 | `generate_tools()` | 生成所有工具的 JSON Schema | `list[ChatCompletionFunctionToolParam]` |
 | `call_tool(tool_call)` | 执行工具调用并封装结果 | `ChatCompletionToolMessageParam` |
-| `load_tools(package_name)` | 自动扫描并加载工具模块 | `None` |
 | `_create_model_from_type_hints(func, model_name)` | 私有方法：从类型注解生成模型 | `Type[BaseModel]` |
+
+### 独立工具方法
+
+除了AgentToolManager的核心方法外，还有两个重要的独立工具方法：
+
+#### `load_tools(package_name)`
+
+自动扫描并批量导入指定包下的所有工具模块。
+
+```python
+from agent_tool_manager import load_tools
+
+# 自动加载 agent_tools 包下的所有工具模块
+load_tools("agent_tools")
+```
+
+**特点：**
+- 递归扫描包及其子包中的所有 `.py` 文件
+- 自动忽略 `__pycache__` 目录和 `__init__.py` 文件
+- 触发模块导入时的装饰器注册逻辑
+- 工具会注册到模块中指定的AgentToolManager实例
+
+#### `merge_tools(tool_managers)`
+
+合并多个工具管理器中的工具，去除重复项。
+
+```python
+from agent_tool_manager import merge_tools
+from tool_registry import tool_manager
+
+# 创建另一个工具管理器
+other_manager = AgentToolManager()
+
+# 合并多个管理器的工具
+combined_tools = merge_tools([tool_manager, other_manager])
+```
+
+**特点：**
+- 自动去重，确保工具名称唯一
+- 返回符合OpenAI格式的工具列表
+- 便于组合不同来源的工具
 
 ### 使用全局实例
 
