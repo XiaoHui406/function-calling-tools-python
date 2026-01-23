@@ -386,12 +386,6 @@ class MyInput(BaseModel):
 def manual_tool(params: MyInput):
     """手动模式"""
     pass
-
-# 方式3：通过类名字符串（新增，灵活引用）
-@tool_manager.agent_tool(InputClass="AnotherModel")
-def string_tool(params):
-    """字符串模式"""
-    pass
 ```
 
 ## 📄 许可证

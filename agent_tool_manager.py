@@ -83,20 +83,7 @@ class AgentToolManager:
             if InputClass is not None and isinstance(InputClass, type) and issubclass(InputClass, BaseModel):
                 resolved_input_class = InputClass
 
-            # 情况2：用户传入了类名字符串（新方式）
-            elif isinstance(InputClass, str):
-                from tool_registry import tool_manager
-                # 查找全局命名空间中的类
-                import sys
-                frame = sys._getframe()
-                # 在调用栈中查找类定义
-                for f in [frame] + [f for f in inspect.getouterframes(frame)[1:]]:
-                    local_class = f.f_locals.get(InputClass)
-                    if local_class and isinstance(local_class, type) and issubclass(local_class, BaseModel):
-                        resolved_input_class = local_class
-                        break
-
-            # 情况3：用户没有传入参数，自动从参数注解生成 Pydantic 模型（新方式）
+            # 情况2：用户没有传入参数，自动从参数注解生成 Pydantic 模型（新方式）
             elif InputClass is None:
                 resolved_input_class = self._create_model_from_type_hints(
                     func, tool_name)
