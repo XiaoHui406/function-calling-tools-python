@@ -187,16 +187,26 @@ class AgentToolManager:
         # 调用函数：如果有单个参数且模型类型匹配，直接传入模型对象
         # 否则传入展开的参数
         sig = inspect.signature(func)
-        if len(sig.parameters) == 1:
-            # 单个参数：直接传入模型对象
-            content = func(tool_args)
-        else:
-            # 多参数：展开模型对象为关键参数
-            content = func(**tool_args.model_dump())
+        should_unpack = True
 
-        tool_callback: ChatCompletionToolMessageParam = ChatCompletionToolMessageParam(
+        # 如果只有一个参数，我们需要判断这个参数是想要整个 Model 还是 Model 中的字段
+        if len(sig.parameters) == 1:
+            param = list(sig.parameters.values())[0]
+            # 检查参数的类型注解是否就是我们的 InputClass
+            if param.annotation == InputClass:
+                should_unpack = False
+
+        try:
+            if should_unpack:
+                content = func(**tool_args.model_dump())
+            else:
+                content = func(tool_args)
+        except Exception as e:
+            # 增加一层错误捕获，方便调试 Agent 内部错误
+            content = f"Error executing tool {tool_name}: {str(e)}"
+
+        return ChatCompletionToolMessageParam(
             role='tool', tool_call_id=tool_call_id, content=json.dumps(content, ensure_ascii=False))
-        return tool_callback
 
 
 def load_tools(package_name: str):
