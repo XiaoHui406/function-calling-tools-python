@@ -161,23 +161,7 @@ class AgentToolManager:
                     fields[param_name] = (
                         param_type, Field(..., description=f"参数 {param_name}"))
 
-            # 使用 Pydantic 的 create_model 动态创建模型
-            # 如果没有字段（空参数函数），创建一个空的 BaseModel
-            if not fields:
-                fields = {"dummy": (str, Field(
-                    default="unused", exclude=True))}
-
             model = create_model(f"{model_name}_Params", **fields)
-
-            # 如果有虚拟字段，删除它
-            if "dummy" in model.model_fields:
-                @classmethod
-                def no_dummy_model_validate(cls, v):
-                    if isinstance(v, dict) and "dummy" in v:
-                        del v["dummy"]
-                    return super(model, cls).model_validate(v)
-                model.model_validate = no_dummy_model_validate
-
             return model
 
         except Exception as e:
