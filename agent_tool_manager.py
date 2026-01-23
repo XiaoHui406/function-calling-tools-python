@@ -9,6 +9,7 @@ import inspect
 from openai.types.chat import ChatCompletionMessageFunctionToolCall, ChatCompletionFunctionToolParam, ChatCompletionToolMessageParam
 from openai.types.shared_params import FunctionDefinition
 import json
+import logging
 
 
 class AgentTool(BaseModel):
@@ -254,7 +255,7 @@ def load_tools(package_name: str):
     except ImportError as e:
         raise ValueError(f"无法导入基础包 '{package_name}': {e}")
 
-    print(f"--- 开始扫描工具目录: {base_path} ---")
+    logging.info(f"--- 开始扫描工具目录: {base_path} ---")
 
     # 2. 使用 os.walk 遍历物理文件系统
     for root, dirs, files in os.walk(base_path):
@@ -282,9 +283,10 @@ def load_tools(package_name: str):
                 # 4. 动态导入
                 try:
                     importlib.import_module(module_name)
-                    print(f"[OK] Loaded module: {module_name}")
+                    logging.info(f"[OK] Loaded module: {module_name}")
                 except Exception as e:
-                    print(f"[FAIL] Failed to load module '{module_name}': {e}")
+                    logging.error(
+                        f"[FAIL] Failed to load module '{module_name}': {e}")
 
 
 def merge_tools(tool_managers: list[AgentToolManager]) -> list[ChatCompletionFunctionToolParam]:
