@@ -281,10 +281,40 @@ def merge_tools(tool_managers: list[AgentToolManager]) -> list[ChatCompletionFun
         合并后的工具列表，去重后的 tools
     """
     tools: list[ChatCompletionFunctionToolParam] = []
-    tool_name_list: set = set()
+    tool_name_list: set[str] = set()
     for manager in tool_managers:
         for tool in manager.generate_tools():
             if tool["function"]["name"] not in tool_name_list:
                 tools.append(tool)
                 tool_name_list.add(tool["function"]["name"])
     return tools
+
+
+def merge_managers(tool_managers: list[AgentToolManager]) -> AgentToolManager:
+    """
+    合并多个工具管理器。
+
+    Args:
+        tool_managers: 要合并的 AgentToolManager 实例列表
+
+    Returns:
+        合并所有工具管理器的工具并去重后的一个新的工具管理器
+
+    Raises:
+        ValueError: 如果 tool_managers 为空或包含非 AgentToolManager 实例
+    """
+    if not tool_managers:
+        raise ValueError("tool_managers 列表不能为空")
+
+    for manager in tool_managers:
+        if not isinstance(manager, AgentToolManager):
+            raise ValueError(f"tool_managers 列表中包含非 AgentToolManager 实例: {type(manager)}")
+
+    merge_manager = AgentToolManager()
+
+    for manager in tool_managers:
+        for (tool_name, tool) in manager.tool_map.items():
+            if tool_name not in merge_manager.tool_name_list:
+                merge_manager.tool_name_list.append(tool_name)
+                merge_manager.tool_map[tool_name] = tool
+    return merge_manager
