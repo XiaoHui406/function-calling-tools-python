@@ -365,6 +365,34 @@ combined_tools = merge_tools([tool_manager, other_manager])
 - 返回符合OpenAI格式的工具列表
 - 便于组合不同来源的工具
 
+#### `merge_managers(tool_managers)`
+
+合并多个工具管理器，返回一个新的工具管理器实例。
+
+```python
+from agent_tool_manager import merge_managers
+from tool_registry import tool_manager
+
+# 创建其他工具管理器
+other_manager = AgentToolManager()
+
+# 合并多个管理器
+merged_manager = merge_managers([tool_manager, other_manager])
+
+# 使用合并后的管理器
+tools = merged_manager.generate_tools()
+```
+
+**特点：**
+- 自动去重，确保工具名称唯一
+- 返回完整的 `AgentToolManager` 实例，支持所有管理器功能
+- 可以继续注册新工具到合并后的管理器
+- 适合需要完整管理器功能的场景
+
+**与 `merge_tools` 的区别：**
+- `merge_tools`: 返回工具列表，适合直接用于API调用
+- `merge_managers`: 返回管理器实例，适合需要继续操作管理器的场景
+
 ### 使用全局实例
 
 为了方便使用，建议通过 `tool_registry` 使用全局单例：
