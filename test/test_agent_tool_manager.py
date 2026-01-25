@@ -5,7 +5,7 @@ from typing import Any, Dict, cast
 import pytest
 from pydantic import BaseModel, Field
 from agent_tool_manager import AgentToolManager, AgentTool
-from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
+from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from openai.types.chat.chat_completion_message_tool_call import Function
 import json
 
@@ -178,7 +178,7 @@ class TestToolExecution:
             return args.a + args.b
 
         # 模拟 OpenAI 返回的 tool_call
-        tool_call = ChatCompletionMessageToolCall(
+        tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_123",
             function=Function(
                 name="add",
@@ -209,7 +209,7 @@ class TestToolExecution:
                 "is_adult": args.age >= 18
             }
 
-        tool_call = ChatCompletionMessageToolCall(
+        tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_456",
             function=Function(
                 name="get_user_info",
@@ -229,7 +229,7 @@ class TestToolExecution:
         """测试调用不存在的工具会抛出异常"""
         manager = AgentToolManager()
 
-        tool_call = ChatCompletionMessageToolCall(
+        tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_999",
             function=Function(
                 name="nonexistent_tool",
@@ -253,7 +253,7 @@ class TestToolExecution:
         def strict_tool(args: StrictInput):
             return args.required_field
 
-        tool_call = ChatCompletionMessageToolCall(
+        tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_789",
             function=Function(
                 name="strict_tool",
@@ -301,7 +301,7 @@ class TestNestedObjects:
         assert "user" in cast(Dict[str, Any], schema["properties"])
 
         # 验证工具调用
-        tool_call = ChatCompletionMessageToolCall(
+        tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_nested",
             function=Function(
                 name="create_user",
@@ -342,7 +342,7 @@ class TestNestedObjects:
                 "total_quantity": sum(item.quantity for item in args.items)
             }
 
-        tool_call = ChatCompletionMessageToolCall(
+        tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_list",
             function=Function(
                 name="create_order",
@@ -410,3 +410,205 @@ class TestMultipleManagers:
         tools2 = manager2.generate_tools()
         assert len(tools1) == 1
         assert len(tools2) == 1
+
+    def test_merge_managers_empty_list_raises_error(self):
+        """测试合并空列表应该抛出异常"""
+        from agent_tool_manager import merge_managers
+
+        with pytest.raises(ValueError, match="tool_managers 列表不能为空"):
+            merge_managers([])
+
+    def test_merge_managers_invalid_type_raises_error(self):
+        """测试合并包含非 AgentToolManager 实例的列表应该抛出异常"""
+        from agent_tool_manager import merge_managers
+
+        manager = AgentToolManager()
+
+        with pytest.raises(ValueError, match="tool_managers 列表中包含非 AgentToolManager 实例"):
+            merge_managers([manager, "not_a_manager", 123])
+
+    def test_merge_single_manager(self):
+        """测试合并单个 manager"""
+        from agent_tool_manager import merge_managers
+
+        manager = AgentToolManager()
+
+        class Input(BaseModel):
+            x: int
+
+        @manager.agent_tool(InputClass=Input)
+        def tool1(args: Input):
+            return args.x * 2
+
+        merged = merge_managers([manager])
+
+        # 验证合并后的 manager 包含原始工具
+        assert len(merged.tool_name_list) == 1
+        assert "tool1" in merged.tool_name_list
+        assert "tool1" in merged.tool_map
+
+        # 验证工具功能正常
+        tools = merged.generate_tools()
+        assert len(tools) == 1
+        assert tools[0]["function"]["name"] == "tool1"
+
+    def test_merge_multiple_managers(self):
+        """测试合并多个 manager"""
+        from agent_tool_manager import merge_managers
+
+        # 创建三个不同的 manager
+        manager1 = AgentToolManager()
+        manager2 = AgentToolManager()
+        manager3 = AgentToolManager()
+
+        class Input(BaseModel):
+            x: int
+
+        @manager1.agent_tool(InputClass=Input)
+        def tool1(args: Input):
+            return args.x * 2
+
+        @manager2.agent_tool(InputClass=Input)
+        def tool2(args: Input):
+            return args.x * 3
+
+        @manager3.agent_tool(InputClass=Input)
+        def tool3(args: Input):
+            return args.x * 4
+
+        merged = merge_managers([manager1, manager2, manager3])
+
+        # 验证合并后的 manager 包含所有工具
+        assert len(merged.tool_name_list) == 3
+        assert set(merged.tool_name_list) == {"tool1", "tool2", "tool3"}
+
+        # 验证工具功能正常
+        tools = merged.generate_tools()
+        assert len(tools) == 3
+        tool_names = {tool["function"]["name"] for tool in tools}
+        assert tool_names == {"tool1", "tool2", "tool3"}
+
+    def test_merge_managers_with_duplicate_tools(self):
+        """测试合并包含相同工具名的多个 manager（应该去重）"""
+        from agent_tool_manager import merge_managers
+
+        # 创建两个 manager，包含相同的工具名
+        manager1 = AgentToolManager()
+        manager2 = AgentToolManager()
+
+        class Input(BaseModel):
+            x: int
+
+        # 两个 manager 都注册名为 "duplicate_tool" 的工具
+        @manager1.agent_tool(InputClass=Input)
+        def duplicate_tool(args: Input):
+            return args.x * 2
+
+        @manager2.agent_tool(InputClass=Input)
+        def duplicate_tool(args: Input):
+            return args.x * 3  # 不同的实现
+
+        merged = merge_managers([manager1, manager2])
+
+        # 验证去重：只保留第一个出现的工具
+        assert len(merged.tool_name_list) == 1
+        assert "duplicate_tool" in merged.tool_name_list
+
+        # 验证保留的是第一个 manager 中的工具
+        # 通过调用工具来验证实现
+        tool_call = ChatCompletionMessageFunctionToolCall(
+            id="call_dup",
+            function=Function(
+                name="duplicate_tool",
+                arguments='{"x": 5}'
+            ),
+            type="function"
+        )
+
+        result = merged.call_tool(tool_call)
+        content = json.loads(str(result["content"]))
+        # 应该返回 10 (5 * 2)，而不是 15 (5 * 3)
+        assert content == 10
+
+    def test_merged_manager_functionality(self):
+        """测试合并后的 manager 功能完整"""
+        from agent_tool_manager import merge_managers
+
+        # 创建两个 manager，每个包含多个工具
+        manager1 = AgentToolManager()
+        manager2 = AgentToolManager()
+
+        class MathInput(BaseModel):
+            a: int
+            b: int
+
+        class StringInput(BaseModel):
+            text: str
+
+        @manager1.agent_tool(InputClass=MathInput)
+        def add(args: MathInput):
+            """加法"""
+            return args.a + args.b
+
+        @manager1.agent_tool(InputClass=MathInput)
+        def multiply(args: MathInput):
+            """乘法"""
+            return args.a * args.b
+
+        @manager2.agent_tool(InputClass=StringInput)
+        def uppercase(args: StringInput):
+            """转大写"""
+            return args.text.upper()
+
+        @manager2.agent_tool(InputClass=MathInput)
+        def subtract(args: MathInput):
+            """减法"""
+            return args.a - args.b
+
+        merged = merge_managers([manager1, manager2])
+
+        # 验证工具数量
+        assert len(merged.tool_name_list) == 4
+        assert set(merged.tool_name_list) == {
+            "add", "multiply", "uppercase", "subtract"}
+
+        # 验证工具 schema 生成
+        tools = merged.generate_tools()
+        assert len(tools) == 4
+
+        # 验证工具调用功能
+        # 测试 add 工具
+        add_call = ChatCompletionMessageFunctionToolCall(
+            id="call_add",
+            function=Function(
+                name="add",
+                arguments='{"a": 10, "b": 20}'
+            ),
+            type="function"
+        )
+        add_result = merged.call_tool(add_call)
+        assert json.loads(str(add_result["content"])) == 30
+
+        # 测试 uppercase 工具
+        upper_call = ChatCompletionMessageFunctionToolCall(
+            id="call_upper",
+            function=Function(
+                name="uppercase",
+                arguments='{"text": "hello"}'
+            ),
+            type="function"
+        )
+        upper_result = merged.call_tool(upper_call)
+        assert json.loads(str(upper_result["content"])) == "HELLO"
+
+        # 测试不存在的工具
+        nonexistent_call = ChatCompletionMessageFunctionToolCall(
+            id="call_none",
+            function=Function(
+                name="nonexistent",
+                arguments='{}'
+            ),
+            type="function"
+        )
+        with pytest.raises(ValueError, match="Tool not found"):
+            merged.call_tool(nonexistent_call)
