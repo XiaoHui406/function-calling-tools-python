@@ -4,7 +4,7 @@ Function calling 工具管理器：封装工具注册、schema 生成、调用�
 import importlib
 import os
 from pydantic import BaseModel, Field, create_model
-from typing import Callable, Type, Optional, Union, get_type_hints
+from typing import Callable, Type, get_type_hints
 import inspect
 from openai.types.chat import ChatCompletionMessageFunctionToolCall, ChatCompletionFunctionToolParam, ChatCompletionToolMessageParam
 from openai.types.shared_params import FunctionDefinition
@@ -270,26 +270,6 @@ def load_tools(package_name: str):
                         f"[FAIL] Failed to load module '{module_name}': {e}")
 
 
-def merge_tools(tool_managers: list[AgentToolManager]) -> list[ChatCompletionFunctionToolParam]:
-    """
-    合并多个工具管理器中的工具。
-
-    Args:
-        tool_managers: 要合并的 AgentToolManager 实例列表
-
-    Returns:
-        合并后的工具列表，去重后的 tools
-    """
-    tools: list[ChatCompletionFunctionToolParam] = []
-    tool_name_list: set[str] = set()
-    for manager in tool_managers:
-        for tool in manager.generate_tools():
-            if tool["function"]["name"] not in tool_name_list:
-                tools.append(tool)
-                tool_name_list.add(tool["function"]["name"])
-    return tools
-
-
 def merge_managers(tool_managers: list[AgentToolManager]) -> AgentToolManager:
     """
     合并多个工具管理器。
@@ -308,7 +288,8 @@ def merge_managers(tool_managers: list[AgentToolManager]) -> AgentToolManager:
 
     for manager in tool_managers:
         if not isinstance(manager, AgentToolManager):
-            raise ValueError(f"tool_managers 列表中包含非 AgentToolManager 实例: {type(manager)}")
+            raise ValueError(
+                f"tool_managers 列表中包含非 AgentToolManager 实例: {type(manager)}")
 
     merge_manager = AgentToolManager()
 
