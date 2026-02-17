@@ -1,35 +1,46 @@
 """
 Function calling 工具管理器：封装工具注册、schema 生成、调用与自动加载。
 """
+
+import asyncio
 import importlib
 import os
 from pydantic import BaseModel, Field, create_model
 from typing import Callable, Type, get_type_hints
 import inspect
-from openai.types.chat import ChatCompletionMessageFunctionToolCall, ChatCompletionFunctionToolParam, ChatCompletionToolMessageParam
+from openai.types.chat import (
+    ChatCompletionMessageFunctionToolCall,
+    ChatCompletionFunctionToolParam,
+    ChatCompletionToolMessageParam,
+)
 from openai.types.shared_params import FunctionDefinition
 import json
 import logging
 
 
 class AgentTool(BaseModel):
-    '''
+    """
     func: 加入function_calling的函数
     InputClass: 用于生成JSON Schema的Pydantic模型类
-    '''
+    """
+
     func: Callable
     InputClass: Type[BaseModel]
 
     def to_tool(self) -> ChatCompletionFunctionToolParam:
         name = self.func.__name__
-        description = self.func.__doc__.strip(
-        ) if self.func.__doc__ else f'调用函数{self.func.__name__}'
+        description = (
+            self.func.__doc__.strip()
+            if self.func.__doc__
+            else f"调用函数{self.func.__name__}"
+        )
         parameters = self.InputClass.model_json_schema()
 
         return ChatCompletionFunctionToolParam(
-            type='function',
+            type="function",
             function=FunctionDefinition(
-                name=name, description=description, parameters=parameters)
+                name=name, description=description, parameters=parameters
+            ),
         )
 
 
@@ -68,6 +79,7 @@ class AgentToolManager:
         Returns:
             装饰后的原函数，保持调用不变。
         """
+
         def decorator(func: Callable):
             tool_name: str = func.__name__
 
@@ -80,13 +92,18 @@ class AgentToolManager:
             resolved_input_class = None
 
             # 情况1：用户传入了 BaseModel 类（原有方式）
-            if InputClass is not None and isinstance(InputClass, type) and issubclass(InputClass, BaseModel):
+            if (
+                InputClass is not None
+                and isinstance(InputClass, type)
+                and issubclass(InputClass, BaseModel)
+            ):
                 resolved_input_class = InputClass
 
             # 情况2：用户没有传入参数，自动从参数注解生成 Pydantic 模型（新方式）
             elif InputClass is None:
                 resolved_input_class = self._create_model_from_type_hints(
-                    func, tool_name)
+                    func, tool_name
+                )
 
             if resolved_input_class is None:
                 raise ValueError(
@@ -96,15 +113,16 @@ class AgentToolManager:
                     f"3. 传入类名字符串且该类已定义。"
                 )
 
-            tool: AgentTool = AgentTool(
-                func=func, InputClass=resolved_input_class)
+            tool: AgentTool = AgentTool(func=func, InputClass=resolved_input_class)
             self.tool_map[tool_name] = tool
             self.tool_name_list.append(tool_name)
             return func
 
         return decorator
 
-    def _create_model_from_type_hints(self, func: Callable, model_name: str) -> Type[BaseModel]:
+    def _create_model_from_type_hints(
+        self, func: Callable, model_name: str
+    ) -> Type[BaseModel]:
         """
         根据函数的类型注解自动创建 Pydantic 模型。
 
@@ -146,7 +164,9 @@ class AgentToolManager:
                     fields[param_name] = (param_type, default_value)
                 else:
                     fields[param_name] = (
-                        param_type, Field(..., description=f"参数 {param_name}"))
+                        param_type,
+                        Field(..., description=f"参数 {param_name}"),
+                    )
 
             model = create_model(f"{model_name}_Params", **fields)
             return model
@@ -163,23 +183,29 @@ class AgentToolManager:
         将已注册的工具转换为 OpenAI Chat Completions 的 tools 参数结构。
         """
         tools: list[ChatCompletionFunctionToolParam] = []
-        for (name, tool) in self.tool_map.items():
+        for name, tool in self.tool_map.items():
             tools.append(tool.to_tool())
         return tools
 
-    def call_tool(self, tool_call: ChatCompletionMessageFunctionToolCall) -> ChatCompletionToolMessageParam:
+    def call_tool(
+        self, tool_call: ChatCompletionMessageFunctionToolCall
+    ) -> ChatCompletionToolMessageParam:
         """
         执行模型返回的工具调用：解析参数、实例化 Pydantic 模型、调用函数并封装为 tool 消息。
         """
-        tool_call_id, tool_name, arguments = tool_call.id, tool_call.function.name, json.loads(
-            tool_call.function.arguments)
+        tool_call_id, tool_name, arguments = (
+            tool_call.id,
+            tool_call.function.name,
+            json.loads(tool_call.function.arguments),
+        )
 
         if tool_name not in self.tool_name_list:
-            raise ValueError(
-                f"Tool not found：未发现名为 '{tool_name}' 的tool"
-            )
+            raise ValueError(f"Tool not found：未发现名为 '{tool_name}' 的tool")
 
-        func, InputClass = self.tool_map[tool_name].func, self.tool_map[tool_name].InputClass
+        func, InputClass = (
+            self.tool_map[tool_name].func,
+            self.tool_map[tool_name].InputClass,
+        )
 
         # 实例化参数模型，对 auto-generated models 重新实例化
         tool_args = InputClass(**arguments)
@@ -206,7 +232,66 @@ class AgentToolManager:
             content = f"Error executing tool {tool_name}: {str(e)}"
 
         return ChatCompletionToolMessageParam(
-            role='tool', tool_call_id=tool_call_id, content=json.dumps(content, ensure_ascii=False))
+            role="tool",
+            tool_call_id=tool_call_id,
+            content=json.dumps(content, ensure_ascii=False),
+        )
+
+    async def acall_tool(
+        self, tool_call: ChatCompletionMessageFunctionToolCall
+    ) -> ChatCompletionToolMessageParam:
+        """
+        异步执行工具调用：解析参数、实例化 Pydantic 模型、调用函数并封装为 tool 消息。
+        支持异步函数和同步函数。同步函数会在线程池中执行以避免阻塞事件循环。
+        """
+        tool_call_id, tool_name, arguments = (
+            tool_call.id,
+            tool_call.function.name,
+            json.loads(tool_call.function.arguments),
+        )
+
+        if tool_name not in self.tool_name_list:
+            raise ValueError(f"Tool not found：未发现名为 '{tool_name}' 的tool")
+
+        func, InputClass = (
+            self.tool_map[tool_name].func,
+            self.tool_map[tool_name].InputClass,
+        )
+
+        # 实例化参数模型
+        tool_args = InputClass(**arguments)
+
+        # 调用函数：如果有单个参数且模型类型匹配，直接传入模型对象
+        sig = inspect.signature(func)
+        should_unpack = True
+
+        if len(sig.parameters) == 1:
+            param = list(sig.parameters.values())[0]
+            if param.annotation == InputClass:
+                should_unpack = False
+
+        try:
+            # 检测是否是协程函数
+            if inspect.iscoroutinefunction(func):
+                # 异步函数：直接 await 调用
+                if should_unpack:
+                    content = await func(**tool_args.model_dump())
+                else:
+                    content = await func(tool_args)
+            else:
+                # 同步函数：在线程池中运行以避免阻塞
+                if should_unpack:
+                    content = await asyncio.to_thread(func, **tool_args.model_dump())
+                else:
+                    content = await asyncio.to_thread(func, tool_args)
+        except Exception as e:
+            content = f"Error executing tool {tool_name}: {str(e)}"
+
+        return ChatCompletionToolMessageParam(
+            role="tool",
+            tool_call_id=tool_call_id,
+            content=json.dumps(content, ensure_ascii=False),
+        )
 
 
 def load_tools(package_name: str):
@@ -241,8 +326,8 @@ def load_tools(package_name: str):
     # 2. 使用 os.walk 遍历物理文件系统
     for root, dirs, files in os.walk(base_path):
         # 忽略 __pycache__ 目录
-        if '__pycache__' in dirs:
-            dirs.remove('__pycache__')
+        if "__pycache__" in dirs:
+            dirs.remove("__pycache__")
 
         for file in files:
             if file.endswith(".py") and file != "__init__.py":
@@ -266,8 +351,7 @@ def load_tools(package_name: str):
                     importlib.import_module(module_name)
                     logging.info(f"[OK] Loaded module: {module_name}")
                 except Exception as e:
-                    logging.error(
-                        f"[FAIL] Failed to load module '{module_name}': {e}")
+                    logging.error(f"[FAIL] Failed to load module '{module_name}': {e}")
 
 
 def merge_managers(tool_managers: list[AgentToolManager]) -> AgentToolManager:
@@ -289,12 +373,13 @@ def merge_managers(tool_managers: list[AgentToolManager]) -> AgentToolManager:
     for manager in tool_managers:
         if not isinstance(manager, AgentToolManager):
             raise ValueError(
-                f"tool_managers 列表中包含非 AgentToolManager 实例: {type(manager)}")
+                f"tool_managers 列表中包含非 AgentToolManager 实例: {type(manager)}"
+            )
 
     merge_manager = AgentToolManager()
 
     for manager in tool_managers:
-        for (tool_name, tool) in manager.tool_map.items():
+        for tool_name, tool in manager.tool_map.items():
             if tool_name not in merge_manager.tool_name_list:
                 merge_manager.tool_name_list.append(tool_name)
                 merge_manager.tool_map[tool_name] = tool
