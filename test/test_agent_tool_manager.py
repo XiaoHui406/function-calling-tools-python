@@ -1,7 +1,9 @@
 """
 AgentToolManager 核心功能测试
 """
+
 from typing import Any, Dict, cast
+import asyncio
 import pytest
 from pydantic import BaseModel, Field
 from agent_tool_manager import AgentToolManager, AgentTool
@@ -65,6 +67,7 @@ class TestAgentToolRegistration:
 
         # 尝试再次注册同名工具应该抛出异常
         with pytest.raises(ValueError, match="Tool name conflict"):
+
             @manager.agent_tool(InputClass=Input1)
             def duplicate_tool(args: Input1):
                 return args.x * 2
@@ -114,13 +117,14 @@ class TestToolSchemaGeneration:
         tool = tools[0]
         assert tool["type"] == "function"
         assert tool["function"]["name"] == "add"
-        assert "description" in tool["function"] and tool["function"]["description"] == "计算两个数字的和"
+        assert (
+            "description" in tool["function"]
+            and tool["function"]["description"] == "计算两个数字的和"
+        )
         assert "parameters" in tool["function"]
         assert "properties" in tool["function"]["parameters"]
-        assert "a" in cast(Dict[str, Any], tool["function"]
-                           ["parameters"]["properties"])
-        assert "b" in cast(Dict[str, Any], tool["function"]
-                           ["parameters"]["properties"])
+        assert "a" in cast(Dict[str, Any], tool["function"]["parameters"]["properties"])
+        assert "b" in cast(Dict[str, Any], tool["function"]["parameters"]["properties"])
 
     def test_generate_tools_without_docstring(self):
         """测试没有 docstring 的工具会生成默认描述"""
@@ -135,7 +139,10 @@ class TestToolSchemaGeneration:
 
         tools = manager.generate_tools()
         assert len(tools) == 1
-        assert "description" in tools[0]["function"] and "调用函数no_doc" in tools[0]["function"]["description"]
+        assert (
+            "description" in tools[0]["function"]
+            and "调用函数no_doc" in tools[0]["function"]["description"]
+        )
 
     def test_generate_multiple_tools_schema(self):
         """测试生成多个工具的 schema"""
@@ -180,11 +187,8 @@ class TestToolExecution:
         # 模拟 OpenAI 返回的 tool_call
         tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_123",
-            function=Function(
-                name="add",
-                arguments='{"a": 10, "b": 20}'
-            ),
-            type="function"
+            function=Function(name="add", arguments='{"a": 10, "b": 20}'),
+            type="function",
         )
 
         result = manager.call_tool(tool_call)
@@ -203,19 +207,14 @@ class TestToolExecution:
 
         @manager.agent_tool(InputClass=UserInput)
         def get_user_info(args: UserInput):
-            return {
-                "name": args.name,
-                "age": args.age,
-                "is_adult": args.age >= 18
-            }
+            return {"name": args.name, "age": args.age, "is_adult": args.age >= 18}
 
         tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_456",
             function=Function(
-                name="get_user_info",
-                arguments='{"name": "张三", "age": 25}'
+                name="get_user_info", arguments='{"name": "张三", "age": 25}'
             ),
-            type="function"
+            type="function",
         )
 
         result = manager.call_tool(tool_call)
@@ -231,11 +230,8 @@ class TestToolExecution:
 
         tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_999",
-            function=Function(
-                name="nonexistent_tool",
-                arguments='{}'
-            ),
-            type="function"
+            function=Function(name="nonexistent_tool", arguments="{}"),
+            type="function",
         )
 
         with pytest.raises(ValueError, match="Tool not found"):
@@ -257,9 +253,9 @@ class TestToolExecution:
             id="call_789",
             function=Function(
                 name="strict_tool",
-                arguments='{"number": "not_a_number"}'  # 缺少必需字段且类型错误
+                arguments='{"number": "not_a_number"}',  # 缺少必需字段且类型错误
             ),
-            type="function"
+            type="function",
         )
 
         # Pydantic 验证失败应该抛出异常
@@ -288,10 +284,7 @@ class TestNestedObjects:
         @manager.agent_tool(InputClass=CreateUserInput)
         def create_user(args: CreateUserInput):
             """创建用户"""
-            return {
-                "name": args.user.name,
-                "city": args.user.address.city
-            }
+            return {"name": args.user.name, "city": args.user.address.city}
 
         # 验证 schema 生成
         tools = manager.generate_tools()
@@ -305,17 +298,16 @@ class TestNestedObjects:
             id="call_nested",
             function=Function(
                 name="create_user",
-                arguments=json.dumps({
-                    "user": {
-                        "name": "李四",
-                        "address": {
-                            "city": "上海",
-                            "street": "南京路"
+                arguments=json.dumps(
+                    {
+                        "user": {
+                            "name": "李四",
+                            "address": {"city": "上海", "street": "南京路"},
                         }
                     }
-                })
+                ),
             ),
-            type="function"
+            type="function",
         )
 
         result = manager.call_tool(tool_call)
@@ -339,21 +331,23 @@ class TestNestedObjects:
             """创建订单"""
             return {
                 "total_items": len(args.items),
-                "total_quantity": sum(item.quantity for item in args.items)
+                "total_quantity": sum(item.quantity for item in args.items),
             }
 
         tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_list",
             function=Function(
                 name="create_order",
-                arguments=json.dumps({
-                    "items": [
-                        {"name": "苹果", "quantity": 3},
-                        {"name": "香蕉", "quantity": 5}
-                    ]
-                })
+                arguments=json.dumps(
+                    {
+                        "items": [
+                            {"name": "苹果", "quantity": 3},
+                            {"name": "香蕉", "quantity": 5},
+                        ]
+                    }
+                ),
             ),
-            type="function"
+            type="function",
         )
 
         result = manager.call_tool(tool_call)
@@ -424,7 +418,9 @@ class TestMultipleManagers:
 
         manager = AgentToolManager()
 
-        with pytest.raises(ValueError, match="tool_managers 列表中包含非 AgentToolManager 实例"):
+        with pytest.raises(
+            ValueError, match="tool_managers 列表中包含非 AgentToolManager 实例"
+        ):
             merge_managers([manager, "not_a_manager", 123])
 
     def test_merge_single_manager(self):
@@ -518,11 +514,8 @@ class TestMultipleManagers:
         # 通过调用工具来验证实现
         tool_call = ChatCompletionMessageFunctionToolCall(
             id="call_dup",
-            function=Function(
-                name="duplicate_tool",
-                arguments='{"x": 5}'
-            ),
-            type="function"
+            function=Function(name="duplicate_tool", arguments='{"x": 5}'),
+            type="function",
         )
 
         result = merged.call_tool(tool_call)
@@ -570,7 +563,11 @@ class TestMultipleManagers:
         # 验证工具数量
         assert len(merged.tool_name_list) == 4
         assert set(merged.tool_name_list) == {
-            "add", "multiply", "uppercase", "subtract"}
+            "add",
+            "multiply",
+            "uppercase",
+            "subtract",
+        }
 
         # 验证工具 schema 生成
         tools = merged.generate_tools()
@@ -580,11 +577,8 @@ class TestMultipleManagers:
         # 测试 add 工具
         add_call = ChatCompletionMessageFunctionToolCall(
             id="call_add",
-            function=Function(
-                name="add",
-                arguments='{"a": 10, "b": 20}'
-            ),
-            type="function"
+            function=Function(name="add", arguments='{"a": 10, "b": 20}'),
+            type="function",
         )
         add_result = merged.call_tool(add_call)
         assert json.loads(str(add_result["content"])) == 30
@@ -592,11 +586,8 @@ class TestMultipleManagers:
         # 测试 uppercase 工具
         upper_call = ChatCompletionMessageFunctionToolCall(
             id="call_upper",
-            function=Function(
-                name="uppercase",
-                arguments='{"text": "hello"}'
-            ),
-            type="function"
+            function=Function(name="uppercase", arguments='{"text": "hello"}'),
+            type="function",
         )
         upper_result = merged.call_tool(upper_call)
         assert json.loads(str(upper_result["content"])) == "HELLO"
@@ -604,11 +595,177 @@ class TestMultipleManagers:
         # 测试不存在的工具
         nonexistent_call = ChatCompletionMessageFunctionToolCall(
             id="call_none",
-            function=Function(
-                name="nonexistent",
-                arguments='{}'
-            ),
-            type="function"
+            function=Function(name="nonexistent", arguments="{}"),
+            type="function",
         )
         with pytest.raises(ValueError, match="Tool not found"):
             merged.call_tool(nonexistent_call)
+
+
+class TestAsyncToolExecution:
+    """测试异步工具调用执行功能"""
+
+    @pytest.mark.asyncio
+    async def test_acall_tool_with_async_function(self):
+        """测试异步工具调用 - 纯异步函数"""
+        manager = AgentToolManager()
+
+        class AddInput(BaseModel):
+            a: int
+            b: int
+
+        @manager.agent_tool(InputClass=AddInput)
+        async def async_add(args: AddInput):
+            await asyncio.sleep(0.01)  # 模拟异步操作
+            return args.a + args.b
+
+        tool_call = ChatCompletionMessageFunctionToolCall(
+            id="call_async_1",
+            function=Function(name="async_add", arguments='{"a": 10, "b": 20}'),
+            type="function",
+        )
+
+        result = await manager.acall_tool(tool_call)
+
+        assert result["role"] == "tool"
+        assert result["tool_call_id"] == "call_async_1"
+        assert json.loads(str(result["content"])) == 30
+
+    @pytest.mark.asyncio
+    async def test_acall_tool_with_sync_function(self):
+        """测试异步工具调用 - 同步函数在线程池中执行"""
+        manager = AgentToolManager()
+
+        class MultiplyInput(BaseModel):
+            a: int
+            b: int
+
+        @manager.agent_tool(InputClass=MultiplyInput)
+        def sync_multiply(args: MultiplyInput):
+            return args.a * args.b
+
+        tool_call = ChatCompletionMessageFunctionToolCall(
+            id="call_sync_1",
+            function=Function(name="sync_multiply", arguments='{"a": 5, "b": 6}'),
+            type="function",
+        )
+
+        result = await manager.acall_tool(tool_call)
+
+        assert result["role"] == "tool"
+        assert result["tool_call_id"] == "call_sync_1"
+        assert json.loads(str(result["content"])) == 30
+
+    @pytest.mark.asyncio
+    async def test_acall_tool_mixed_functions(self):
+        """测试异步工具调用 - 混合注册异步和同步工具"""
+        manager = AgentToolManager()
+
+        class MathInput(BaseModel):
+            x: int
+            y: int
+
+        @manager.agent_tool(InputClass=MathInput)
+        async def async_add(args: MathInput):
+            await asyncio.sleep(0.01)
+            return args.x + args.y
+
+        @manager.agent_tool(InputClass=MathInput)
+        def sync_subtract(args: MathInput):
+            return args.x - args.y
+
+        # 测试异步工具
+        async_call = ChatCompletionMessageFunctionToolCall(
+            id="call_async",
+            function=Function(name="async_add", arguments='{"x": 15, "y": 25}'),
+            type="function",
+        )
+
+        async_result = await manager.acall_tool(async_call)
+        assert json.loads(str(async_result["content"])) == 40
+
+        # 测试同步工具
+        sync_call = ChatCompletionMessageFunctionToolCall(
+            id="call_sync",
+            function=Function(name="sync_subtract", arguments='{"x": 30, "y": 10}'),
+            type="function",
+        )
+
+        sync_result = await manager.acall_tool(sync_call)
+        assert json.loads(str(sync_result["content"])) == 20
+
+    @pytest.mark.asyncio
+    async def test_acall_tool_nonexistent(self):
+        """测试异步调用不存在的工具会抛出异常"""
+        manager = AgentToolManager()
+
+        tool_call = ChatCompletionMessageFunctionToolCall(
+            id="call_nonexistent",
+            function=Function(name="ghost_tool", arguments="{}"),
+            type="function",
+        )
+
+        with pytest.raises(ValueError, match="Tool not found"):
+            await manager.acall_tool(tool_call)
+
+    @pytest.mark.asyncio
+    async def test_acall_tool_with_complex_return(self):
+        """测试异步工具调用返回复杂对象"""
+        manager = AgentToolManager()
+
+        class UserInput(BaseModel):
+            name: str
+            age: int
+
+        @manager.agent_tool(InputClass=UserInput)
+        async def async_get_user(args: UserInput):
+            await asyncio.sleep(0.01)
+            return {
+                "name": args.name,
+                "age": args.age,
+                "category": "adult" if args.age >= 18 else "minor",
+            }
+
+        tool_call = ChatCompletionMessageFunctionToolCall(
+            id="call_user",
+            function=Function(
+                name="async_get_user", arguments='{"name": "Alice", "age": 22}'
+            ),
+            type="function",
+        )
+
+        result = await manager.acall_tool(tool_call)
+        content = json.loads(str(result["content"]))
+
+        assert content["name"] == "Alice"
+        assert content["age"] == 22
+        assert content["category"] == "adult"
+
+    @pytest.mark.asyncio
+    async def test_acall_tool_error_handling(self):
+        """测试异步工具调用错误处理"""
+        manager = AgentToolManager()
+
+        class ErrorInput(BaseModel):
+            should_fail: bool
+
+        @manager.agent_tool(InputClass=ErrorInput)
+        async def async_error_tool(args: ErrorInput):
+            if args.should_fail:
+                raise ValueError("Async error occurred")
+            return "success"
+
+        tool_call = ChatCompletionMessageFunctionToolCall(
+            id="call_error",
+            function=Function(
+                name="async_error_tool", arguments='{"should_fail": true}'
+            ),
+            type="function",
+        )
+
+        result = await manager.acall_tool(tool_call)
+        content = str(result["content"])
+
+        # 错误应该被捕获并作为字符串返回
+        assert "Error executing tool" in content
+        assert "Async error occurred" in content
