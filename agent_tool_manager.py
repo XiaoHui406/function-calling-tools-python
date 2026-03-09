@@ -6,7 +6,7 @@ import asyncio
 import importlib
 import os
 from pydantic import BaseModel, Field, create_model
-from typing import Callable, Type, get_type_hints
+from typing import Callable, Type, get_type_hints, Optional
 import inspect
 from openai.types.chat import (
     ChatCompletionMessageFunctionToolCall,
@@ -57,7 +57,7 @@ class AgentToolManager:
         self.tool_name_list: list[str] = []
         self.tool_map: dict[str, AgentTool] = {}
 
-    def agent_tool(self, InputClass: Type[BaseModel] | str | None = None):
+    def agent_tool(self, InputClass: Optional[Type[AgentTool]] = None):
         """
         装饰器：注册函数为工具。
 
