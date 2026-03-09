@@ -6,6 +6,7 @@
 2. 方式2：使用 Pydantic BaseModel（原有功能）
 3. 方式3：演示工具调用
 """
+import asyncio
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -377,6 +378,159 @@ else:
     except Exception as e:
         print(f"\n❌ 在线测试失败: {e}")
         print("请检查网络连接或 API 配置")
+
+print("\n" + "=" * 70)
+print("=" * 70)
+
+
+# =============================================================================
+# 异步工具调用演示
+# =============================================================================
+print("\n" + "=" * 70)
+print("异步工具调用演示 (acall_tool)")
+print("=" * 70)
+
+
+# 定义异步工具
+@tool_manager.agent_tool()
+async def async_search_data(query: str, limit: int = 5):
+    """
+    异步搜索数据。
+
+    Args:
+        query: 搜索关键词
+        limit: 返回结果数量限制
+    """
+    print(f"[ASYNC DEBUG] 异步搜索: {query}, limit={limit}")
+    # 模拟异步操作（如网络请求）
+    await asyncio.sleep(0.1)
+    return {
+        "query": query,
+        "results": [f"Result {i} for {query}" for i in range(limit)],
+        "total": limit
+    }
+
+
+# 定义同步工具（用于测试 acall_tool 自动处理同步函数）
+@tool_manager.agent_tool()
+def sync_process_data(data: str, uppercase: bool = True):
+    """
+    同步处理数据。
+
+    Args:
+        data: 要处理的数据
+        uppercase: 是否转换为大写
+    """
+    print(f"[SYNC DEBUG] 同步处理数据: {data}")
+    # 模拟一些处理时间
+    import time
+    time.sleep(0.05)
+    if uppercase:
+        data = data.upper()
+    return {"processed": data, "length": len(data)}
+
+
+print("✅ 成功注册异步工具: async_search_data")
+print("✅ 成功注册同步工具: sync_process_data")
+
+
+async def run_async_demo():
+    """运行异步工具调用演示"""
+
+    print("\n" + "-" * 70)
+    print("测试 1: 异步调用 async_search_data")
+    print("-" * 70)
+
+    # 创建模拟的 tool_call
+    tool_call = ChatCompletionMessageFunctionToolCall(
+        id="async_call_001",
+        type="function",
+        function=Function(
+            name="async_search_data",
+            arguments=json.dumps(
+                {"query": "Python", "limit": 3}, ensure_ascii=False)
+        )
+    )
+
+    print(f"调用工具: async_search_data")
+    print(f"参数: {{'query': 'Python', 'limit': 3}}")
+
+    try:
+        # 使用 acall_tool 异步调用
+        output = await tool_manager.acall_tool(tool_call)
+        content = output['content']
+        assert isinstance(content, str)
+        print(
+            f"结果: {json.dumps(json.loads(content), indent=2, ensure_ascii=False)}")
+        print("✅ 异步调用成功")
+    except Exception as e:
+        print(f"❌ 错误: {e}")
+
+    print("\n" + "-" * 70)
+    print("测试 2: 异步调用 sync_process_data (同步函数)")
+    print("-" * 70)
+
+    # 创建模拟的 tool_call
+    tool_call = ChatCompletionMessageFunctionToolCall(
+        id="async_call_002",
+        type="function",
+        function=Function(
+            name="sync_process_data",
+            arguments=json.dumps(
+                {"data": "hello world", "uppercase": True}, ensure_ascii=False)
+        )
+    )
+
+    print(f"调用工具: sync_process_data")
+    print(f"参数: {{'data': 'hello world', 'uppercase': True}}")
+
+    try:
+        # 使用 acall_tool 异步调用同步函数（会自动在线程池中执行）
+        output = await tool_manager.acall_tool(tool_call)
+        content = output['content']
+        assert isinstance(content, str)
+        print(
+            f"结果: {json.dumps(json.loads(content), indent=2, ensure_ascii=False)}")
+        print("✅ 异步调用同步函数成功")
+    except Exception as e:
+        print(f"❌ 错误: {e}")
+
+    print("\n" + "-" * 70)
+    print("测试 3: 多个工具顺序异步调用")
+    print("-" * 70)
+
+    tasks = []
+
+    # 创建多个 tool_call
+    for i in range(3):
+        tool_call = ChatCompletionMessageFunctionToolCall(
+            id=f"async_call_00{3+i}",
+            type="function",
+            function=Function(
+                name="async_search_data",
+                arguments=json.dumps(
+                    {"query": f"Query {i}", "limit": 2}, ensure_ascii=False)
+            )
+        )
+        tasks.append(tool_manager.acall_tool(tool_call))
+
+    # 并发执行所有任务
+    print("并发调用 3 个异步工具...")
+    results = await asyncio.gather(*tasks)
+
+    for i, result in enumerate(results):
+        print(
+            f"结果 {i+1}: {json.dumps(json.loads(result['content']), ensure_ascii=False)}")
+
+    print("✅ 并发异步调用成功")
+
+
+# 运行异步演示
+print("\n正在运行异步演示...")
+try:
+    asyncio.run(run_async_demo())
+except Exception as e:
+    print(f"❌ 异步演示失败: {e}")
 
 print("\n" + "=" * 70)
 print("演示完成！")
