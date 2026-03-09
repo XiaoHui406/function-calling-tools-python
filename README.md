@@ -16,80 +16,33 @@
 
 ## 📋 目录
 
-- [安装](#安装)
-- [快速开始](#快速开始)
+- [如何集成到你的项目中](#如何集成到你的项目中)
 - [核心概念](#核心概念)
 - [工具定义方式](#工具定义方式)
 - [完整示例](#完整示例)
 - [项目结构](#项目结构)
 
-## 🚀 安装
+## 🔌 如何集成到你的项目中
 
-### 环境要求
+你可以轻松地将 Function Calling Tools 集成到现有项目中，只需简单几步：
 
-- Python >= 3.12
+### 1. 确保依赖
 
-### 使用 uv（推荐）
-
-```bash
-# 克隆仓库
-git clone https://github.com/XiaoHui406/function-calling-tools-python.git
-cd function-calling-tools-python
-
-# 使用 uv 安装依赖
-uv sync
-```
-
-### 使用 pip
+你的项目需要包含 `pydantic` 和 `openai` 两个库，且 `python>=3.9`：
 
 ```bash
-# 克隆仓库
-git clone https://github.com/XiaoHui406/function-calling-tools-python.git
-cd function-calling-tools-python
-
-# 安装依赖
-pip install -e .
+pip install pydantic openai
 ```
 
-## ⚡ 快速开始
+### 2. 复制核心文件
 
-### 1. 配置环境变量
+将 `agent_tool_manager.py` 复制到你的项目目录中。
 
-在项目根目录创建 `.env` 文件：
+### 3. 开始使用
 
-```env
-API_KEY=your_openai_api_key
-BASE_URL=https://api.openai.com/v1
-MODEL=gpt-4o-mini
-```
-
-### 2. 运行示例
-
-```bash
-python example.py
-```
-
-示例输出：
-
-```
-========== Function Calling 测试流程 ==========
-
-用户提问: <function calling test> 39+186=?
-
-[步骤1] 发送消息到模型...
-
-[步骤2] 模型请求调用工具: add
-工具参数: {"a": 39, "b": 186}
-
-[步骤3] 执行工具调用...
-工具执行结果: 225
-
-[步骤4] 将工具结果返回给模型...
-
-✅ 模型最终回复: 39 + 186 = 225
-
-========== 测试完成 ==========
-```
+现在你就可以在项目中导入并使用工具管理器了
+详细使用方式请继续看文档
+使用示例请查看项目中的 `example.py`
 
 ## 🎯 工具定义方式
 

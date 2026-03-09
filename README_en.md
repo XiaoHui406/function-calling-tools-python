@@ -14,80 +14,33 @@ A lightweight Python toolkit for OpenAI Function Calling, providing automatic to
 
 ## 📋 Table of Contents
 
-- [Installation](#installation)
-- [Quick Start](#quick-start)
+- [How to Integrate into Your Project](#how-to-integrate-into-your-project)
 - [Core Concepts](#core-concepts)
 - [Tool Definition Styles](#tool-definition-styles)
 - [Complete Example](#complete-example)
 - [Project Structure](#project-structure)
 
-## 🚀 Installation
+## 🔌 How to Integrate into Your Project
 
-### Requirements
+You can easily integrate Function Calling Tools into your existing project with just a few simple steps:
 
-- Python >= 3.12
+### 1. Ensure Dependencies
 
-### Using uv (Recommended)
-
-```bash
-# Clone repository
-git clone https://github.com/XiaoHui406/function-calling-tools-python.git
-cd function-calling-tools-python
-
-# Install dependencies using uv
-uv sync
-```
-
-### Using pip
+Your project needs to include `pydantic` and `openai` libraries, and `python>=3.9`:
 
 ```bash
-# Clone repository
-git clone https://github.com/XiaoHui406/function-calling-tools-python.git
-cd function-calling-tools-python
-
-# Install dependencies
-pip install -e .
+pip install pydantic openai
 ```
 
-## ⚡ Quick Start
+### 2. Copy Core Files
 
-### 1. Configure Environment Variables
+Copy `agent_tool_manager.py` to your project directory.
 
-Create a `.env` file in the project root:
+### 3. Start Using
 
-```env
-API_KEY=your_openai_api_key
-BASE_URL=https://api.openai.com/v1
-MODEL=gpt-4o-mini
-```
-
-### 2. Run Example
-
-```bash
-python example.py
-```
-
-Example Output:
-
-```
-========== Function Calling Test Flow ==========
-
-User Question: <function calling test> 39+186=?
-
-[Step 1] Sending message to model...
-
-[Step 2] Model requests tool call: add
-Tool parameters: {"a": 39, "b": 186}
-
-[Step 3] Executing tool call...
-Tool execution result: 225
-
-[Step 4] Returning tool result to model...
-
-✅ Model final response: 39 + 186 = 225
-
-========== Test Complete ==========
-```
+Now you can import and use the tool manager in your project.
+For detailed usage, please continue reading the documentation.
+For usage examples, please refer to `example.py` in the project.
 
 ## 🎯 Tool Definition Styles
 
@@ -335,11 +288,11 @@ python example.py
 
 Configure the following variables in `.env` file:
 
-| Variable    | Description         | Example                      |
-| ----------- | ------------------- | ---------------------------- |
-| `API_KEY`   | OpenAI API Key      | `sk-xxx...`                  |
-| `BASE_URL`  | API Base URL        | `https://api.openai.com/v1`  |
-| `MODEL`     | Model name to use   | `gpt-4o-mini`                |
+| Variable   | Description       | Example                     |
+| ---------- | ----------------- | --------------------------- |
+| `API_KEY`  | OpenAI API Key    | `sk-xxx...`                 |
+| `BASE_URL` | API Base URL      | `https://api.openai.com/v1` |
+| `MODEL`    | Model name to use | `gpt-4o-mini`               |
 
 ### Example .env File
 
@@ -394,13 +347,13 @@ manager = AgentToolManager()
 
 **Main Methods:**
 
-| Method                                             | Description                                     | Return Value                             |
-| -------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
-| `agent_tool(InputClass=None)`                      | Decorator to register function as tool; InputClass optional | Decorator function                       |
-| `generate_tools()`                                 | Generate JSON Schema for all tools              | `list[ChatCompletionFunctionToolParam]`  |
-| `call_tool(tool_call)`                             | Synchronously execute tool call and encapsulate result | `ChatCompletionToolMessageParam`         |
-| `acall_tool(tool_call)`                            | Asynchronously execute tool call, supports coroutine and sync functions | `ChatCompletionToolMessageParam`         |
-| `_create_model_from_type_hints(func, model_name)`  | Private method: generate model from type hints  | `Type[BaseModel]`                        |
+| Method                                            | Description                                                             | Return Value                            |
+| ------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------- |
+| `agent_tool(InputClass=None)`                     | Decorator to register function as tool; InputClass optional             | Decorator function                      |
+| `generate_tools()`                                | Generate JSON Schema for all tools                                      | `list[ChatCompletionFunctionToolParam]` |
+| `call_tool(tool_call)`                            | Synchronously execute tool call and encapsulate result                  | `ChatCompletionToolMessageParam`        |
+| `acall_tool(tool_call)`                           | Asynchronously execute tool call, supports coroutine and sync functions | `ChatCompletionToolMessageParam`        |
+| `_create_model_from_type_hints(func, model_name)` | Private method: generate model from type hints                          | `Type[BaseModel]`                       |
 
 ### Standalone Tool Methods
 
