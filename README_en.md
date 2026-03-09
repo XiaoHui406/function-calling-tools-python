@@ -53,7 +53,9 @@ This library supports multiple tool definition styles, from simple to flexible:
 For scenarios without complex parameter validation:
 
 ```python
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
+
+tool_manager = AgentToolManager()
 
 @tool_manager.agent_tool()  # No parameters, automatic inference
 def calculate(a: int, b: int):
@@ -87,7 +89,9 @@ For scenarios requiring complex validation and documentation:
 
 ```python
 from pydantic import BaseModel, Field
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
+
+tool_manager = AgentToolManager()
 
 class WeatherParams(BaseModel):
     """Weather query parameters"""
@@ -153,8 +157,10 @@ This library supports two tool invocation methods:
 ### Basic Tool Calling Flow
 
 ```python
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
 from openai import OpenAI
+
+tool_manager = AgentToolManager()
 
 # Initialize OpenAI client
 client = OpenAI(api_key="your_key", base_url="your_base_url")
@@ -195,7 +201,9 @@ if message.tool_calls:
 
 ```python
 import json
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
+
+tool_manager = AgentToolManager()
 
 # View JSON Schema for all tools
 tools = tool_manager.generate_tools()
@@ -206,8 +214,10 @@ print(json.dumps(tools, indent=2, ensure_ascii=False))
 
 ```python
 import asyncio
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
 from openai import AsyncOpenAI
+
+tool_manager = AgentToolManager()
 
 # Initialize async OpenAI client
 client = AsyncOpenAI(api_key="your_key", base_url="your_base_url")
@@ -364,8 +374,9 @@ load_tools("agent_tools")
 Merge multiple tool managers and return a new tool manager instance.
 
 ```python
-from agent_tool_manager import merge_managers
-from tool_registry import tool_manager
+from agent_tool_manager import merge_managers, AgentToolManager
+
+tool_manager = AgentToolManager()
 
 # Create other tool managers
 other_manager = AgentToolManager()
@@ -394,7 +405,9 @@ tools = merged_manager.generate_tools()
 For convenience, it's recommended to use the global singleton via `tool_registry`:
 
 ```python
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
+
+tool_manager = AgentToolManager()
 
 # Style 1: Auto-create parameter model (new, simplest)
 @tool_manager.agent_tool()

@@ -55,7 +55,9 @@ pip install pydantic openai
 适用于不需要复杂参数校验的场景：
 
 ```python
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
+
+tool_manager = AgentToolManager()
 
 @tool_manager.agent_tool()  # 不传参数，自动推导
 def calculate(a: int, b: int):
@@ -89,7 +91,9 @@ def greet(name: str, message: str = "你好"):
 
 ```python
 from pydantic import BaseModel, Field
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
+
+tool_manager = AgentToolManager()
 
 class WeatherParams(BaseModel):
     """天气查询参数"""
@@ -155,8 +159,10 @@ def get_weather(params: WeatherParams):
 ### 基本工具调用流程
 
 ```python
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
 from openai import OpenAI
+
+tool_manager = AgentToolManager()
 
 # 初始化 OpenAI 客户端
 client = OpenAI(api_key="your_key", base_url="your_base_url")
@@ -197,7 +203,9 @@ if message.tool_calls:
 
 ```python
 import json
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
+
+tool_manager = AgentToolManager()
 
 # 查看所有工具的 JSON Schema
 tools = tool_manager.generate_tools()
@@ -208,8 +216,9 @@ print(json.dumps(tools, indent=2, ensure_ascii=False))
 
 ```python
 import asyncio
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
 from openai import AsyncOpenAI
+tool_manager = AgentToolManager()
 
 # 初始化异步 OpenAI 客户端
 client = AsyncOpenAI(api_key="your_key", base_url="your_base_url")
@@ -366,8 +375,8 @@ load_tools("agent_tools")
 合并多个工具管理器，返回一个新的工具管理器实例。
 
 ```python
-from agent_tool_manager import merge_managers
-from tool_registry import tool_manager
+from agent_tool_manager import merge_managers, AgentToolManager
+tool_manager = AgentToolManager()
 
 # 创建其他工具管理器
 other_manager = AgentToolManager()
@@ -396,7 +405,8 @@ tools = merged_manager.generate_tools()
 为了方便使用，建议通过 `tool_registry` 使用全局单例：
 
 ```python
-from tool_registry import tool_manager
+from agent_tool_manager import AgentToolManager
+tool_manager = AgentToolManager()
 
 # 方式1：自动创建参数模型（新增，最简单）
 @tool_manager.agent_tool()
