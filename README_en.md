@@ -19,6 +19,8 @@ A lightweight Python toolkit for OpenAI Function Calling, providing automatic to
 - [Core Concepts](#-core-concepts)
 - [Complete Example](#-complete-example)
 - [Project Structure](#-project-structure)
+- [Testing](#-testing)
+- [API Usage](#-api-usage)
 
 ## 🔌 How to Integrate into Your Project
 
@@ -280,26 +282,6 @@ function-call-tools/
 ├── pyproject.toml            # Project configuration
 ├── .env                      # Environment variables (create yourself)
 └── README.md                 # Project documentation
-```
-
-## 🔧 Environment Configuration
-
-### Required Environment Variables
-
-Configure the following variables in `.env` file:
-
-| Variable   | Description       | Example                     |
-| ---------- | ----------------- | --------------------------- |
-| `API_KEY`  | OpenAI API Key    | `sk-xxx...`                 |
-| `BASE_URL` | API Base URL      | `https://api.openai.com/v1` |
-| `MODEL`    | Model name to use | `gpt-4o-mini`               |
-
-### Example .env File
-
-```env
-API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
-BASE_URL=https://api.openai.com/v1
-MODEL=gpt-4o-mini
 ```
 
 ## 🧪 Testing

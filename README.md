@@ -21,6 +21,8 @@
 - [核心概念](#-核心概念)
 - [完整示例](#-完整示例)
 - [项目结构](#-项目结构)
+- [测试](#-测试)
+- [API使用](#-api-使用)
 
 ## 🔌 如何集成到你的项目中
 
@@ -282,26 +284,6 @@ function-calling-tools-python/
 ├── pyproject.toml            # 项目配置
 ├── .env                      # 环境变量（需自行创建）
 └── README.md                 # 项目文档
-```
-
-## 🔧 环境配置
-
-### 必需的环境变量
-
-在 `.env` 文件中配置以下变量：
-
-| 变量名     | 说明            | 示例                        |
-| ---------- | --------------- | --------------------------- |
-| `API_KEY`  | OpenAI API 密钥 | `sk-xxx...`                 |
-| `BASE_URL` | API 基础 URL    | `https://api.openai.com/v1` |
-| `MODEL`    | 使用的模型名称  | `gpt-4o-mini`               |
-
-### 示例 .env 文件
-
-```env
-API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
-BASE_URL=https://api.openai.com/v1
-MODEL=gpt-4o-mini
 ```
 
 ## 🧪 测试
