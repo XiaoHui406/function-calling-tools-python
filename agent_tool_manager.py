@@ -72,10 +72,6 @@ class AgentToolManager:
 
            将根据函数参数的类型注解自动生成 Pydantic 模型
 
-        3. 将模型类名指定为字符串（新方式）:
-            @manager.agent_tool(InputClass="MyParams")
-            def my_func(MyParams): MyParams  # MyParams 必须是 BaseModel
-
         Returns:
             装饰后的原函数，保持调用不变。
         """
@@ -113,7 +109,8 @@ class AgentToolManager:
                     f"3. 传入类名字符串且该类已定义。"
                 )
 
-            tool: AgentTool = AgentTool(func=func, InputClass=resolved_input_class)
+            tool: AgentTool = AgentTool(
+                func=func, InputClass=resolved_input_class)
             self.tool_map[tool_name] = tool
             self.tool_name_list.append(tool_name)
             return func
@@ -351,7 +348,8 @@ def load_tools(package_name: str):
                     importlib.import_module(module_name)
                     logging.info(f"[OK] Loaded module: {module_name}")
                 except Exception as e:
-                    logging.error(f"[FAIL] Failed to load module '{module_name}': {e}")
+                    logging.error(
+                        f"[FAIL] Failed to load module '{module_name}': {e}")
 
 
 def merge_managers(tool_managers: list[AgentToolManager]) -> AgentToolManager:
