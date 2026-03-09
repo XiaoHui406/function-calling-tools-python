@@ -2,6 +2,8 @@
 
 一个用于 OpenAI Function Calling 的轻量级 Python 工具库，提供自动工具注册、参数校验和工具调用管理功能。
 
+> 🌐 **English Documentation Available**: [README_en.md](README_en.md)
+
 ## ✨ 核心功能
 
 - 🎯 **装饰器式注册**：通过简单的装饰器将 Python 函数注册为 Function Calling 工具
