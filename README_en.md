@@ -14,11 +14,11 @@ A lightweight Python toolkit for OpenAI Function Calling, providing automatic to
 
 ## 📋 Table of Contents
 
-- [How to Integrate into Your Project](#how-to-integrate-into-your-project)
-- [Core Concepts](#core-concepts)
-- [Tool Definition Styles](#tool-definition-styles)
-- [Complete Example](#complete-example)
-- [Project Structure](#project-structure)
+- [How to Integrate into Your Project](#-how-to-integrate-into-your-project)
+- [Tool Definition Styles](#-tool-definition-styles)
+- [Core Concepts](#-core-concepts)
+- [Complete Example](#-complete-example)
+- [Project Structure](#-project-structure)
 
 ## 🔌 How to Integrate into Your Project
 
@@ -111,22 +111,6 @@ def get_weather(params: WeatherParams):
 - ✅ Must use type annotations (Python 3.12+ recommended)
 - ✅ Automatically generated Pydantic models use strictest validation rules
 - ✅ For field descriptions, use the Pydantic BaseModel style
-
-## 📁 Project Structure
-
-```
-function-call-tools/
-├── agent_tool_manager.py     # Core tool manager
-├── tool_registry.py          # Global tool registration entry
-├── agent_tools/              # Tool modules directory
-│   └── math_tools/
-│       └── math_tools.py     # Example: Math operations tools
-├── example.py                # Complete example script
-├── test/                     # Unit tests directory
-├── pyproject.toml            # Project configuration
-├── .env                      # Environment variables (create yourself)
-└── README.md                 # Project documentation
-```
 
 ## 🔍 Core Concepts
 
@@ -280,6 +264,22 @@ See [`example.py`](example.py) for a complete integration example:
 
 ```bash
 python example.py
+```
+
+## 📁 Project Structure
+
+```
+function-call-tools/
+├── agent_tool_manager.py     # Core tool manager
+├── tool_registry.py          # Global tool registration entry
+├── agent_tools/              # Tool modules directory
+│   └── math_tools/
+│       └── math_tools.py     # Example: Math operations tools
+├── example.py                # Complete example script
+├── test/                     # Unit tests directory
+├── pyproject.toml            # Project configuration
+├── .env                      # Environment variables (create yourself)
+└── README.md                 # Project documentation
 ```
 
 ## 🔧 Environment Configuration

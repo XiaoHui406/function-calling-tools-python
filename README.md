@@ -16,11 +16,11 @@
 
 ## 📋 目录
 
-- [如何集成到你的项目中](#如何集成到你的项目中)
-- [核心概念](#核心概念)
-- [工具定义方式](#工具定义方式)
-- [完整示例](#完整示例)
-- [项目结构](#项目结构)
+- [如何集成到你的项目中](#-如何集成到你的项目中)
+- [工具定义方式](#-工具定义方式)
+- [核心概念](#-核心概念)
+- [完整示例](#-完整示例)
+- [项目结构](#-项目结构)
 
 ## 🔌 如何集成到你的项目中
 
@@ -113,22 +113,6 @@ def get_weather(params: WeatherParams):
 - ✅ 必须使用类型注解（推荐使用 Python 3.12+）
 - ✅ 自动生成的 Pydantic 模型将使用最严格的验证规则
 - ✅ 如需字段描述，请使用 Pydantic BaseModel 方式
-
-## 📁 项目结构
-
-```
-function-call-tools/
-├── agent_tool_manager.py    # 核心工具管理器
-├── tool_registry.py          # 全局工具注册入口
-├── agent_tools/              # 工具模块目录
-│   └── math_tools/
-│       └── math_tools.py     # 示例：数学运算工具
-├── example.py                # 完整示例脚本
-├── test/                     # 单元测试目录
-├── pyproject.toml            # 项目配置
-├── .env                      # 环境变量（需自行创建）
-└── README.md                 # 项目文档
-```
 
 ## 🔍 核心概念
 
@@ -282,6 +266,22 @@ asyncio.run(main())
 
 ```bash
 python example.py
+```
+
+## 📁 项目结构
+
+```
+function-calling-tools-python/
+├── agent_tool_manager.py    # 核心工具管理器
+├── tool_registry.py          # 全局工具注册入口
+├── agent_tools/              # 工具模块目录
+│   └── math_tools/
+│       └── math_tools.py     # 示例：数学运算工具
+├── example.py                # 完整示例脚本
+├── test/                     # 单元测试目录
+├── pyproject.toml            # 项目配置
+├── .env                      # 环境变量（需自行创建）
+└── README.md                 # 项目文档
 ```
 
 ## 🔧 环境配置
