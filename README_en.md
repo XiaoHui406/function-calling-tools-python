@@ -395,36 +395,6 @@ tools = merged_manager.generate_tools()
 - Can continue registering new tools to merged manager
 - Suitable for scenarios requiring full manager functionality
 
-**Difference from `merge_tools`:**
-
-- `merge_tools`: Returns tool list, suitable for direct API calls
-- `merge_managers`: Returns manager instance, suitable for scenarios requiring continued manager operations
-
-### Using Global Instance
-
-For convenience, it's recommended to use the global singleton via `tool_registry`:
-
-```python
-from agent_tool_manager import AgentToolManager
-
-tool_manager = AgentToolManager()
-
-# Style 1: Auto-create parameter model (new, simplest)
-@tool_manager.agent_tool()
-def auto_tool(a: int, b: str):
-    """Auto mode"""
-    pass
-
-# Style 2: Manually specify BaseModel (original, most powerful)
-class MyInput(BaseModel):
-    name: str
-
-@tool_manager.agent_tool(InputClass=MyInput)
-def manual_tool(params: MyInput):
-    """Manual mode"""
-    pass
-```
-
 ## 📄 License
 
 MIT License

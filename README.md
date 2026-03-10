@@ -395,35 +395,6 @@ tools = merged_manager.generate_tools()
 - 可以继续注册新工具到合并后的管理器
 - 适合需要完整管理器功能的场景
 
-**与 `merge_tools` 的区别：**
-
-- `merge_tools`: 返回工具列表，适合直接用于API调用
-- `merge_managers`: 返回管理器实例，适合需要继续操作管理器的场景
-
-### 使用全局实例
-
-为了方便使用，建议通过 `tool_registry` 使用全局单例：
-
-```python
-from agent_tool_manager import AgentToolManager
-tool_manager = AgentToolManager()
-
-# 方式1：自动创建参数模型（新增，最简单）
-@tool_manager.agent_tool()
-def auto_tool(a: int, b: str):
-    """自动模式"""
-    pass
-
-# 方式2：手动指定 BaseModel（原有，功能最强）
-class MyInput(BaseModel):
-    name: str
-
-@tool_manager.agent_tool(InputClass=MyInput)
-def manual_tool(params: MyInput):
-    """手动模式"""
-    pass
-```
-
 ## 📄 许可证
 
 MIT License
