@@ -57,7 +57,7 @@ class AgentToolManager:
         self.tool_name_list: list[str] = []
         self.tool_map: dict[str, AgentTool] = {}
 
-    def agent_tool(self, InputClass: Optional[Type[AgentTool]] = None):
+    def agent_tool(self, InputClass: Optional[Type[BaseModel]] = None):
         """
         装饰器：注册函数为工具。
 
